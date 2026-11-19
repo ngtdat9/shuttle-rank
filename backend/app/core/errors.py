@@ -18,6 +18,7 @@ _HTTP_CODES = {
     404: "not_found",
     409: "conflict",
     422: "unprocessable_entity",
+    429: "rate_limited",
 }
 
 
@@ -102,6 +103,7 @@ async def http_exception_handler(_request: Request, exc: HTTPException) -> JSONR
     return JSONResponse(
         status_code=exc.status_code,
         content=error_payload(code, message, details),
+        headers=exc.headers,
     )
 
 

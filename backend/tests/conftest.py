@@ -15,6 +15,11 @@ os.environ["AUTH_MODE"] = "dev"
 os.environ["DEV_ADMIN_TOKEN"] = "test-token"
 os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DB_DIR / 'test.db'}"
 os.environ["CORS_ORIGINS"] = "http://localhost:3000"
+os.environ["SUPABASE_URL"] = ""
+os.environ["SUPABASE_JWT_SECRET"] = ""
+os.environ["SUPABASE_JWT_AUDIENCE"] = "authenticated"
+os.environ["ADMIN_BOOTSTRAP_USER_ID"] = ""
+os.environ["ADMIN_BOOTSTRAP_EMAIL"] = ""
 
 import pytest
 from fastapi.testclient import TestClient

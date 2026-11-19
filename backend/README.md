@@ -17,6 +17,42 @@ cp .env.example .env
 
 `.env.example` uses `AUTH_MODE=dev` for local development. The app refuses to start when `APP_ENV=production` and `AUTH_MODE=dev`.
 
+## Authentication
+
+Public `GET` routes do not require a token. Every `/api/v1/admin/*` route requires `Authorization: Bearer <token>`.
+
+### Local development
+
+Keep `AUTH_MODE=dev` and set `DEV_ADMIN_TOKEN` to a long random string. Send that exact string as the bearer token. The actor id is `dev-admin`. An empty `DEV_ADMIN_TOKEN` rejects every admin request.
+
+`AUTH_MODE=dev` cannot run when `APP_ENV=production`. The process refuses to start, and the admin dependency rejects that combination as well.
+
+### Supabase
+
+Production must use `AUTH_MODE=supabase`.
+
+1. In the Supabase dashboard, create the single admin user by hand and turn off public sign-ups.
+2. Copy the project URL into `SUPABASE_URL`.
+3. Pick one signing method:
+   - Legacy shared secret: set `SUPABASE_JWT_SECRET`. Tokens are verified with HS256.
+   - Signing keys: leave `SUPABASE_JWT_SECRET` empty. The API loads JWKS from `{SUPABASE_URL}/auth/v1/.well-known/jwks.json` and accepts ES256 or RS256. If the secret is set, it wins and JWKS is not used.
+4. `SUPABASE_JWT_AUDIENCE` defaults to `authenticated`.
+5. Allowlist that user. Either set `ADMIN_BOOTSTRAP_USER_ID` to the user's UUID (the JWT `sub`) and `ADMIN_BOOTSTRAP_EMAIL` to their email, then start the API (startup upserts an active `admin_users` row when both are set), or run the CLI below.
+
+A role claim in the token is ignored. The caller is an admin only when an active `admin_users` row has `auth_user_id` equal to `sub`.
+
+From this directory, after `alembic upgrade head`:
+
+```bash
+python -m app.cli create-admin --auth-user-id <uuid> --email <email> --display-name "Name"
+python -m app.cli list-admins
+python -m app.cli deactivate-admin --auth-user-id <uuid>
+```
+
+The UUID is stored in canonical lowercase form, which is the form Supabase puts in `sub`. `create-admin` updates the existing row when that id is already present. A later `seed-demo` subcommand can be added beside these.
+
+Failed admin authentication is limited to 20 attempts per 5 minutes per client IP. Further admin requests from that IP get `429` until the window clears. Counts are kept in memory in this process, which is enough for a single Render instance. The key is the client address the server reports. Behind Render's proxy, start uvicorn with proxy headers trusted so that address is the visitor, for example `--proxy-headers --forwarded-allow-ips='*'`.
+
 ## Database
 
 Apply the schema to the database in `DATABASE_URL` (default `sqlite:///./badminton.db`):
