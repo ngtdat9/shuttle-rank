@@ -64,14 +64,15 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 
 | ID | Defect | Severity | Fix task | Status |
 |---|---|---|---|---|
-| BUG-01 | Dashboard multi-player `RatingChart` draws no lines (legend only); single-series profile chart works | High | P6-03 | TODO |
-| BUG-02 | Hydration mismatch warnings in dev on dashboard (`components/club/dashboard-view.tsx` around line 165, date/locale formatting) and player profile (5 issues) | Medium | P6-03 | TODO |
-| BUG-03 | Desktop header nav wraps to two rows at 1024px width | Low | P6-03 | TODO |
-| BUG-04 | Dashboard leader card shows the player name twice (heading and avatar label) | Low | P6-03 | TODO |
-| BUG-05 | Rating chart curve overshoots below and above real values (spline); use monotone or linear | Low | P6-03 | TODO |
+| BUG-01 | Dashboard multi-player `RatingChart` draws no lines (legend only); single-series profile chart works | High | P6-03 | IN_QA (not reproducible on seeded data in P6-03a; re-check in P6-02) |
+| BUG-02 | Hydration mismatch warnings in dev on dashboard (`components/club/dashboard-view.tsx` around line 165, date/locale formatting) and player profile (5 issues) | Medium | P6-03 | DONE (P6-03a: viewer-local time after mount, deterministic SSR) |
+| BUG-03 | Desktop header nav wraps to two rows at 1024px width | Low | P6-03 | DONE (P6-03a) |
+| BUG-04 | Dashboard leader card shows the player name twice (heading and avatar label) | Low | P6-03 | DONE (P6-03a) |
+| BUG-05 | Rating chart curve overshoots below and above real values (spline); use monotone or linear | Low | P6-03 | DONE (already monotone; no change) |
 | BUG-06 | `game_scores` sides above 99 accepted (R-MA-02); `match_service._validate_game_scores` | Medium | P2-04 | TODO |
 | BUG-07 | Notes over 500 chars accepted (R-MA-02); `match_service._validate_notes` (check PATCH too) | Medium | P2-04 | TODO |
 | BUG-08 | Rank ties keyed on (rating, wins) instead of rating only (R-LB-02, OQ-10); `ranking_service.compute_standings`, `monthly_service._assign_ranks` | Medium | P2-04 | TODO |
+| BUG-09 | Rating chart x-axis labels use UTC month/day; can be off by one day vs local near midnight | Low | P6-03 | TODO |
 
 Verified working: dashboard data, leaderboard (form ordering, shared ranks, deltas), player profile, head-to-head totals, all public routes return 200 against the live API, and zero-sum ratings (8 players sum to 12000).
 
