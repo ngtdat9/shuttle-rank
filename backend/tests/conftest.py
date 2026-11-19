@@ -2,6 +2,12 @@
 
 The environment is pinned to a temporary SQLite file before the app is imported
 so tests never open the development database.
+
+Set ``TEST_DATABASE_URL`` (for example ``postgresql://user@host:5432/testdb``) to
+run the ``session``, ``db`` and ``api_client`` fixtures against PostgreSQL. Each
+test gets its own throwaway schema that is dropped afterwards. Tests that build
+their own SQLite file (migrations, CLI subprocess, auth module tests) stay on
+SQLite. SQLite is the default.
 """
 
 import os
@@ -21,14 +27,52 @@ os.environ["SUPABASE_JWT_AUDIENCE"] = "authenticated"
 os.environ["ADMIN_BOOTSTRAP_USER_ID"] = ""
 os.environ["ADMIN_BOOTSTRAP_EMAIL"] = ""
 
+import uuid
+
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import event, text
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 import app.models  # noqa: F401
 from app.db.base import Base
 from app.db.session import get_db, make_engine
 from app.main import app
+
+TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL", "").strip()
+
+
+@pytest.fixture
+def fixture_engine(tmp_path: Path) -> Generator[Engine, None, None]:
+    """Fresh schema-created engine: SQLite file by default, a PostgreSQL schema if configured."""
+    if not TEST_DATABASE_URL:
+        engine = make_engine(f"sqlite:///{tmp_path / 'fixture.db'}")
+        Base.metadata.create_all(engine)
+        yield engine
+        engine.dispose()
+        return
+    schema = f"t_{uuid.uuid4().hex}"
+    admin = make_engine(TEST_DATABASE_URL)
+    with admin.begin() as conn:
+        conn.execute(text(f'CREATE SCHEMA "{schema}"'))
+    engine = make_engine(TEST_DATABASE_URL)
+
+    # Pin every pooled connection to the throwaway schema.
+    @event.listens_for(engine, "connect")
+    def _set_search_path(dbapi_connection, _record):  # type: ignore[no-untyped-def]
+        with dbapi_connection.cursor() as cursor:
+            cursor.execute(f'SET search_path TO "{schema}"')
+        dbapi_connection.commit()
+
+    Base.metadata.create_all(engine)
+    try:
+        yield engine
+    finally:
+        engine.dispose()
+        with admin.begin() as conn:
+            conn.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
+        admin.dispose()
 
 
 @pytest.fixture
@@ -40,23 +84,20 @@ def client() -> Generator[TestClient, None, None]:
 
 
 @pytest.fixture
-def session(tmp_path: Path) -> Generator[Session, None, None]:
-    engine = make_engine(f"sqlite:///{tmp_path / 'constraints.db'}")
-    Base.metadata.create_all(engine)
+def session(fixture_engine: Engine) -> Generator[Session, None, None]:
+    engine = fixture_engine
     db = Session(bind=engine)
     try:
         yield db
     finally:
         db.rollback()
         db.close()
-        engine.dispose()
 
 
 @pytest.fixture
-def db(tmp_path: Path) -> Generator[Session, None, None]:
-    """Isolated database. Service calls commit; the file is discarded afterward."""
-    engine = make_engine(f"sqlite:///{tmp_path / 'services.db'}")
-    Base.metadata.create_all(engine)
+def db(fixture_engine: Engine) -> Generator[Session, None, None]:
+    """Isolated database. Service calls commit; the database is discarded afterward."""
+    engine = fixture_engine
     factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
     database = factory()
     try:
@@ -64,14 +105,14 @@ def db(tmp_path: Path) -> Generator[Session, None, None]:
     finally:
         database.rollback()
         database.close()
-        engine.dispose()
 
 
 @pytest.fixture
-def api_client(tmp_path: Path) -> Generator[tuple[TestClient, sessionmaker[Session]], None, None]:
+def api_client(
+    fixture_engine: Engine,
+) -> Generator[tuple[TestClient, sessionmaker[Session]], None, None]:
     """HTTP client and session factory sharing one temporary database."""
-    engine = make_engine(f"sqlite:///{tmp_path / 'api.db'}")
-    Base.metadata.create_all(engine)
+    engine = fixture_engine
     factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
     def override_get_db() -> Generator[Session, None, None]:
@@ -88,4 +129,3 @@ def api_client(tmp_path: Path) -> Generator[tuple[TestClient, sessionmaker[Sessi
     with TestClient(app) as test_client:
         yield test_client, factory
     app.dependency_overrides.clear()
-    engine.dispose()

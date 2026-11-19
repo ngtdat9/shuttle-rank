@@ -48,3 +48,25 @@ def test_importing_settings_fails_at_startup_for_dev_auth_in_production() -> Non
     )
     assert result.returncode != 0
     assert "AUTH_MODE=dev is not allowed when APP_ENV=production" in result.stderr + result.stdout
+
+
+def test_normalize_database_url_maps_supabase_urls_to_psycopg() -> None:
+    from app.db.session import normalize_database_url
+
+    assert normalize_database_url("postgresql://u:p@h:5432/db") == (
+        "postgresql+psycopg://u:p@h:5432/db"
+    )
+    assert normalize_database_url("postgres://u:p@h:6543/db?sslmode=require") == (
+        "postgresql+psycopg://u:p@h:6543/db?sslmode=require"
+    )
+    assert normalize_database_url("postgresql+psycopg://u@h/db") == "postgresql+psycopg://u@h/db"
+    assert normalize_database_url("sqlite:///./x.db") == "sqlite:///./x.db"
+
+
+def test_postgres_engine_uses_pre_ping() -> None:
+    from app.db.session import make_engine
+
+    engine = make_engine("postgres://u:p@localhost:6543/db")
+    assert engine.dialect.driver == "psycopg"
+    assert engine.pool._pre_ping is True  # noqa: SLF001
+    engine.dispose()
