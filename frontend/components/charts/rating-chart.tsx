@@ -1,10 +1,10 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useState } from "react";
 import {
-  Area,
-  AreaChart,
   CartesianGrid,
+  Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -12,12 +12,19 @@ import {
   type TooltipContentProps,
 } from "recharts";
 
-import { formatDate, formatRating } from "@/lib/format";
+import { formatDate, formatDelta, formatRating } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export type RatingPoint = {
   date: string;
   rating: number;
+  /** Axis and tooltip label. Use "Start" for the 1500 point. */
+  label?: string;
+  /** Sort key. Defaults to `date`. The 1500 start should sort first. */
+  sortKey?: string;
+  opponent?: string;
+  result?: "W" | "L";
+  ratingChange?: number | null;
 };
 
 export type RatingSeries = {
@@ -32,53 +39,119 @@ export type RatingChartProps = {
   height?: number;
 };
 
-const SERIES_COLORS = ["#a6f36b", "#35d5d0", "#8ea196", "#d5f5b8", "#1f8a86"];
+const SERIES_COLORS = ["#A6F36B", "#35D5D0", "#F5F7F5", "#C8D4A8", "#A1AAA3"];
+
+type PointMeta = {
+  opponent?: string;
+  result?: "W" | "L";
+  ratingChange?: number | null;
+};
+
+type ChartRow = {
+  key: string;
+  label: string;
+} & Record<string, string | number | null>;
 
 function seriesColor(series: RatingSeries, index: number): string {
   return series.color ?? SERIES_COLORS[index % SERIES_COLORS.length] ?? SERIES_COLORS[0];
 }
 
+function seriesDataKey(index: number): string {
+  return `s${index}`;
+}
+
 function asNumber(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === "string" && value.trim() !== "") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
+  if (typeof value === "number" && Number.isFinite(value)) return value;
   return null;
+}
+
+function displayLabel(label: string): string {
+  if (label === "Start") return "Start";
+  if (/^\d{4}-\d{2}-\d{2}/.test(label)) {
+    return formatDate(label, { month: "short", day: "numeric" }, "en-US");
+  }
+  return label;
+}
+
+function buildChart(series: RatingSeries[]): {
+  rows: ChartRow[];
+  meta: Map<string, PointMeta>;
+} {
+  const keys = new Set<string>();
+  const labels = new Map<string, string>();
+  const meta = new Map<string, PointMeta>();
+
+  series.forEach((item, index) => {
+    const dataKey = seriesDataKey(index);
+    item.points.forEach((point) => {
+      const key = point.sortKey ?? point.date;
+      keys.add(key);
+      if (!labels.has(key)) labels.set(key, point.label ?? point.date);
+      if (point.opponent || point.result || point.ratingChange != null) {
+        meta.set(`${dataKey}\0${key}`, {
+          opponent: point.opponent,
+          result: point.result,
+          ratingChange: point.ratingChange,
+        });
+      }
+    });
+  });
+
+  const rows = [...keys].sort().map((key) => {
+    const row: ChartRow = { key, label: labels.get(key) ?? key };
+    series.forEach((item, index) => {
+      const point = item.points.find((entry) => (entry.sortKey ?? entry.date) === key);
+      row[seriesDataKey(index)] = point ? point.rating : null;
+    });
+    return row;
+  });
+
+  return { rows, meta };
 }
 
 function RatingTooltip({
   active,
   payload,
   label,
-}: Pick<TooltipContentProps<number, string>, "active" | "payload" | "label">) {
-  if (!active || payload.length === 0) {
-    return null;
-  }
+  meta,
+  series,
+}: Pick<TooltipContentProps<number, string>, "active" | "payload" | "label"> & {
+  meta: Map<string, PointMeta>;
+  series: RatingSeries[];
+}) {
+  if (!active || payload.length === 0) return null;
 
-  const dateLabel =
-    typeof label === "string" || typeof label === "number"
-      ? formatDate(String(label), { month: "short", day: "numeric" })
-      : "";
+  const row = payload[0]?.payload as ChartRow | undefined;
+  const dateLabel = displayLabel(row?.label ?? (typeof label === "string" ? label : ""));
 
   return (
-    <div className="rounded-2xl border border-border bg-elevated px-3 py-2 text-xs shadow-lg">
+    <div className="rounded-xl border border-border bg-elevated px-3 py-2 text-xs">
       {dateLabel ? <p className="mb-1 text-muted-foreground">{dateLabel}</p> : null}
       <ul className="flex flex-col gap-1">
         {payload.map((entry) => {
           const rating = asNumber(entry.value);
+          const dataKey = String(entry.dataKey ?? "");
+          const detail = meta.get(`${dataKey}\0${row?.key ?? ""}`);
+          const name =
+            series.find((_, index) => seriesDataKey(index) === dataKey)?.name ?? entry.name;
           return (
-            <li key={String(entry.dataKey)} className="flex items-center gap-2">
-              <span
-                className="size-2 rounded-full"
-                style={{ background: entry.color ?? "#a6f36b" }}
-              />
-              <span className="text-muted-foreground">{entry.name}</span>
-              <span className="ml-auto font-medium tabular-nums">
-                {rating === null ? "—" : formatRating(rating)}
+            <li key={dataKey} className="flex flex-col gap-0.5">
+              <span className="flex items-center gap-2">
+                <span
+                  className="size-2 rounded-full"
+                  style={{ background: entry.color ?? "#A6F36B" }}
+                />
+                <span className="text-muted-foreground">{name}</span>
+                <span className="ml-auto font-medium tabular-nums">
+                  {rating === null ? "—" : formatRating(rating)}
+                </span>
               </span>
+              {detail?.opponent ? (
+                <span className="pl-4 text-muted-foreground">
+                  {detail.result ? `${detail.result} vs ${detail.opponent}` : detail.opponent}
+                  {detail.ratingChange != null ? ` · ${formatDelta(detail.ratingChange)}` : ""}
+                </span>
+              ) : null}
             </li>
           );
         })}
@@ -87,38 +160,19 @@ function RatingTooltip({
   );
 }
 
-type ChartRow = { date: string } & Record<string, string | number | null>;
-
-function buildRows(series: RatingSeries[]): ChartRow[] {
-  const dates = new Set<string>();
-  for (const item of series) {
-    for (const point of item.points) {
-      dates.add(point.date);
-    }
-  }
-
-  return [...dates].sort().map((date) => {
-    const row: ChartRow = { date };
-    for (const item of series) {
-      const point = item.points.find((entry) => entry.date === date);
-      row[item.name] = point ? point.rating : null;
-    }
-    return row;
-  });
-}
-
 export function RatingChart({ series, className, height = 256 }: RatingChartProps) {
   const gradientPrefix = useId().replace(/:/g, "");
-  const rows = buildRows(series);
+  const [hidden, setHidden] = useState<string[]>([]);
+  const { rows, meta } = buildChart(series);
   const hasPoints = series.some((item) => item.points.length > 0);
+  const visible = series
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => !hidden.includes(item.name));
 
   if (!hasPoints) {
     return (
       <div
-        className={cn(
-          "flex items-center justify-center rounded-[22px] bg-card text-sm text-muted-foreground ring-1 ring-foreground/10",
-          className,
-        )}
+        className={cn("flex items-center justify-center text-sm text-muted-foreground", className)}
         style={{ height }}
       >
         No rating history yet
@@ -126,94 +180,105 @@ export function RatingChart({ series, className, height = 256 }: RatingChartProp
     );
   }
 
-  const ratings = series.flatMap((item) => item.points.map((point) => point.rating));
-  const min = Math.min(...ratings);
-  const max = Math.max(...ratings);
+  const ratings = visible.flatMap(({ item }) => item.points.map((point) => point.rating));
+  const min = ratings.length > 0 ? Math.min(...ratings) : 1500;
+  const max = ratings.length > 0 ? Math.max(...ratings) : 1500;
   const pad = Math.max(8, Math.round((max - min) * 0.18) || 8);
+  const showDots = rows.length === 1;
+
+  function toggle(name: string) {
+    setHidden((current) =>
+      current.includes(name) ? current.filter((item) => item !== name) : [...current, name],
+    );
+  }
 
   return (
     <div className={cn("w-full", className)}>
       {series.length > 1 ? (
-        <ul className="mb-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
-          {series.map((item, index) => (
-            <li key={item.name} className="inline-flex items-center gap-1.5">
-              <span
-                className="size-2 rounded-full"
-                style={{ background: seriesColor(item, index) }}
-              />
-              {item.name}
-            </li>
-          ))}
+        <ul className="mb-3 flex flex-wrap gap-2 text-xs">
+          {series.map((item, index) => {
+            const on = !hidden.includes(item.name);
+            return (
+              <li key={`${item.name}-${index}`}>
+                <button
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => toggle(item.name)}
+                  className={cn(
+                    "inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    on ? "text-foreground" : "text-muted-foreground line-through",
+                  )}
+                >
+                  <span
+                    className="size-2 rounded-full"
+                    style={{ background: on ? seriesColor(item, index) : "#2C312E" }}
+                  />
+                  {item.name}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       ) : null}
-      <div style={{ height }} className="w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-            <defs>
-              {series.map((item, index) => {
+      {visible.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Turn a player back on in the legend.</p>
+      ) : (
+        <div style={{ height }} className="w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+              <CartesianGrid vertical={false} stroke="#2C312E" />
+              <XAxis
+                dataKey="key"
+                tickLine={false}
+                axisLine={false}
+                tick={{ fill: "#A1AAA3", fontSize: 12 }}
+                tickFormatter={(value: string) => {
+                  const row = rows.find((entry) => entry.key === value);
+                  return displayLabel(row?.label ?? value);
+                }}
+                minTickGap={24}
+              />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                width={44}
+                domain={[min - pad, max + pad]}
+                tick={{ fill: "#A1AAA3", fontSize: 12 }}
+                tickFormatter={(value: number) => formatRating(value)}
+              />
+              <Tooltip
+                content={(props) => (
+                  <RatingTooltip
+                    active={props.active}
+                    payload={props.payload}
+                    label={props.label}
+                    meta={meta}
+                    series={series}
+                  />
+                )}
+                cursor={{ stroke: "#2C312E", strokeWidth: 1 }}
+              />
+              {visible.map(({ item, index }) => {
                 const color = seriesColor(item, index);
-                const id = `${gradientPrefix}-${index}`;
                 return (
-                  <linearGradient key={id} id={id} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={color} stopOpacity={0.28} />
-                    <stop offset="100%" stopColor={color} stopOpacity={0} />
-                  </linearGradient>
+                  <Line
+                    key={`${gradientPrefix}-${item.name}-${index}`}
+                    type="monotone"
+                    dataKey={seriesDataKey(index)}
+                    name={item.name}
+                    stroke={color}
+                    strokeWidth={2}
+                    connectNulls
+                    dot={showDots ? { r: 3, strokeWidth: 0, fill: color } : false}
+                    activeDot={{ r: 4, strokeWidth: 0, fill: color }}
+                    isAnimationActive={false}
+                  />
                 );
               })}
-            </defs>
-            <CartesianGrid
-              vertical={false}
-              stroke="rgba(255,255,255,0.06)"
-              strokeDasharray="3 6"
-            />
-            <XAxis
-              dataKey="date"
-              tickLine={false}
-              axisLine={false}
-              tick={{ fill: "#a1aaa3", fontSize: 11 }}
-              tickFormatter={(value: string) =>
-                formatDate(value, { month: "short", day: "numeric" }, "en-US")
-              }
-              minTickGap={24}
-            />
-            <YAxis
-              tickLine={false}
-              axisLine={false}
-              width={42}
-              domain={[min - pad, max + pad]}
-              tick={{ fill: "#a1aaa3", fontSize: 11 }}
-              tickFormatter={(value: number) => formatRating(value, "en-US")}
-            />
-            <Tooltip
-              content={(props) => (
-                <RatingTooltip
-                  active={props.active}
-                  payload={props.payload}
-                  label={props.label}
-                />
-              )}
-              cursor={{ stroke: "rgba(255,255,255,0.16)", strokeWidth: 1 }}
-            />
-            {series.map((item, index) => {
-              const color = seriesColor(item, index);
-              return (
-                <Area
-                  key={item.name}
-                  type="monotone"
-                  dataKey={item.name}
-                  name={item.name}
-                  stroke={color}
-                  strokeWidth={2}
-                  fill={`url(#${gradientPrefix}-${index})`}
-                  connectNulls
-                  dot={{ r: 2.5, strokeWidth: 0, fill: color }}
-                  activeDot={{ r: 4, strokeWidth: 0, fill: color }}
-                />
-              );
-            })}
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }

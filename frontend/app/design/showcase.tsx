@@ -41,7 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatDate, formatRating } from "@/lib/format";
+import { formatDate, formatDelta, formatRating, formatWinRate } from "@/lib/format";
 
 /**
  * Rendered only by app/design/page.tsx.
@@ -160,7 +160,8 @@ export function DesignShowcase() {
         </div>
         <p className="text-sm text-muted-foreground">
           {formatDate("2026-03-01", undefined, "en-US")} · rating{" "}
-          {formatRating(1284, "en-US")} · 72.4% · delta +16
+          {formatRating(1516, "en-US")} · {formatWinRate(0.5)} · delta {formatDelta(16)} /{" "}
+          {formatDelta(-16)}
         </p>
       </Block>
 

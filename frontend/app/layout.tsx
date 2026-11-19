@@ -25,6 +25,8 @@ export const metadata: Metadata = {
   description: "Men's singles Elo rankings for a private badminton club.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html

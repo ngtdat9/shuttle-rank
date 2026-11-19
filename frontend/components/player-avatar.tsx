@@ -37,8 +37,8 @@ export function initialsFromName(name: string): string {
     return parts[0]!.slice(0, 2).toUpperCase();
   }
   const first = parts[0]?.[0] ?? "";
-  const last = parts[parts.length - 1]?.[0] ?? "";
-  return `${first}${last}`.toUpperCase();
+  const second = parts[1]?.[0] ?? "";
+  return `${first}${second}`.toUpperCase();
 }
 
 const SIZE_MAP = {

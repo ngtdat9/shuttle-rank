@@ -1,7 +1,5 @@
 /**
- * Public runtime config.
- * The typed API client is intentionally not here yet — the contract is
- * still being written, and the next task adds `lib/api` and `types/`.
+ * Public runtime config. Only NEXT_PUBLIC values belong here.
  */
 const DEFAULT_API_BASE_URL = "http://localhost:8000/api/v1";
 
