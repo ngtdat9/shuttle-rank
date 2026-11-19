@@ -27,7 +27,7 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 | P2-01 | Player service and match processing: transactional rating updates, rating history, duplicate prevention, chronological replay (backdated, correct, cancel, delete), monthly snapshot rebuild, stats/ranking/head-to-head services | be | P1-01, P1-04 | COMPLETED | Contract business rules; replay equals full recalculation | Branch: 54 passed. On `main` after merging with P3-01: 92 passed, ruff clean. Orchestrator reviewed the replay engine |
 | P2-02 | Public read endpoints (dashboard, rankings, monthly, players, matches, head-to-head, achievements read) | be | P2-01 | COMPLETED | Responses match `docs/API.md` | — |
 | P2-03 | Spec-first QA tests: Elo, matches, replay, rankings, head-to-head | qa | P1-01, P1-04 | DONE | Tests derived from the contract | Merged. 43 QA tests in `backend/tests/qa/`; 3 product defects found (BUG-06..08), tracked as strict xfails, fixed in P2-04 |
-| P2-04 | Fix QA defects BUG-06..08 (score 0–99, notes ≤500, rating-only rank ties) and remove xfails | be | P2-03, P5-01 | TODO | xfails removed and passing | — |
+| P2-04 | Fix QA defects BUG-06..08 (score 0–99, notes ≤500, rating-only rank ties) and remove xfails | be | P2-03, P5-01 | IN_PROGRESS | xfails removed and passing | — |
 
 ## Phase 3: Authentication and admin backend
 
@@ -48,7 +48,7 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 
 | ID | Task | Agent | Depends on | Status | Acceptance criteria | Test results |
 |---|---|---|---|---|---|---|
-| P5-01 | Tournament service: participants, bracket generation (byes, seeding), progression through the match service; achievements service and endpoints | be | P3-02 | IN_PROGRESS | Byes, odd counts, advancement, final positions; no duplicate awards | — |
+| P5-01 | Tournament service: participants, bracket generation (byes, seeding), progression through the match service; achievements service and endpoints | be | P3-02 | DONE | Byes, odd counts, advancement, final positions; no duplicate awards | Merged. 13 admin routes, bracket sync on match changes (D-022), seed tournaments, `deleted_at` on Match. QA PASS (215 passed) |
 | P5-02 | Tournament list and detail with bracket; achievements on profile and dashboard | fe | P4-02, P5-01 contract | REVIEW | Bracket readable on desktop and mobile | lint, tsc, build pass; error states verified with the API down; bracket samples for 5 and 8 players reviewed. Merged. Live check pending tournament backend (P5-01) |
 | P5-03 | Admin UI: login (Supabase and dev), route guard, admin dashboard, players, matches (record, correct, cancel, delete with confirmations), tournaments, achievements, audit log | fe | P4-01, P3-02 | REVIEW | Admin-only; confirmations on rating-affecting actions | lint, tsc, build pass; login and route guard checked in the browser. Orchestrator fixed dynamic `process.env[name]` reads that broke Supabase mode in the browser; verified the values are inlined in the bundle. Merged. Live admin flows pending P3-02 |
 
@@ -56,9 +56,9 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 
 | ID | Task | Agent | Depends on | Status | Acceptance criteria | Test results |
 |---|---|---|---|---|---|---|
-| P6-01 | Backend QA: every endpoint, authorization matrix, persistence, tournaments | qa | P5-01 | TODO | `BUILD_PLAN.md` section 11 plus the brief's section 9 | — |
-| P6-02 | Frontend QA: navigation, integration against the seeded backend, states, responsive layouts, admin protection, production build | qa | P5-02, P5-03 | TODO | All pages work against the real API | — |
-| P6-03 | Fix defects found in QA | be/fe | P6-01, P6-02 | TODO | QA re-verification passes | — |
+| P6-01 | Backend QA: every endpoint, authorization matrix, persistence, tournaments | qa | P5-01 | IN_PROGRESS | `BUILD_PLAN.md` section 11 plus the brief's section 9 | — |
+| P6-02 | Frontend QA: navigation, integration against the seeded backend, states, responsive layouts, admin protection, production build | qa | P5-02, P5-03 | IN_PROGRESS | All pages work against the real API | — |
+| P6-03 | Fix defects found in QA | be/fe | P6-01, P6-02 | TODO | QA re-verification passes | P6-03a merged (BUG-02..05, D-020 type) |
 
 ### Defects found by orchestrator integration check (2026-11-19, live API + seeded temp DB)
 
