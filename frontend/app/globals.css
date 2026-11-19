@@ -81,7 +81,7 @@
   --warning: #e6b15a;
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.14);
-  --ring: #a6f36b;
+  --ring: #35d5d0;
   --chart-1: #a6f36b;
   --chart-2: #35d5d0;
   --chart-3: #8ea196;
@@ -95,7 +95,7 @@
   --sidebar-accent: #222623;
   --sidebar-accent-foreground: #f5f7f5;
   --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-ring: #a6f36b;
+  --sidebar-ring: #35d5d0;
 }
 
 @layer base {

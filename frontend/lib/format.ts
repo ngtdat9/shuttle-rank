@@ -43,15 +43,16 @@ export function formatDate(
   }).format(date);
 }
 
-/** Whole-number rating. Uses the runtime locale unless one is passed. */
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** Whole-number rating with no thousands separator (1516, not 1,516). */
 export function formatRating(value: number, locale?: Intl.LocalesArgument): string {
+  void locale;
   if (!Number.isFinite(value)) {
     return "—";
   }
 
-  return new Intl.NumberFormat(locale, {
-    maximumFractionDigits: 0,
-  }).format(value);
+  return String(Math.trunc(value));
 }
 
 /**
@@ -62,22 +63,68 @@ export function formatPercent(value: number, digits = 1): string {
     return "—";
   }
 
-  const formatted = new Intl.NumberFormat(undefined, {
+  const formatted = new Intl.NumberFormat("en-US", {
     minimumFractionDigits: 0,
     maximumFractionDigits: digits,
+    useGrouping: false,
   }).format(value);
 
   return `${formatted}%`;
 }
 
-/** Signed rating change: +16, -16, or 0. */
-export function formatDelta(value: number): string {
-  if (!Number.isFinite(value)) {
+/**
+ * Win rate from the API is 0–1, or null when the player has no matches.
+ * One decimal percent: 0.5 → "50.0%". Null is an em dash.
+ */
+export function formatWinRate(rate: number | null | undefined): string {
+  if (rate == null || !Number.isFinite(rate)) {
     return "—";
   }
 
-  return new Intl.NumberFormat(undefined, {
-    maximumFractionDigits: 0,
-    signDisplay: "exceptZero",
-  }).format(value);
+  const formatted = new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+    useGrouping: false,
+  }).format(rate * 100);
+
+  return `${formatted}%`;
+}
+
+/** Signed rating change: +16, −16 (U+2212), or 0. Null is an em dash. */
+export function formatDelta(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) {
+    return "—";
+  }
+
+  const rounded = Math.trunc(value);
+  if (rounded > 0) return `+${rounded}`;
+  if (rounded < 0) return `\u2212${Math.abs(rounded)}`;
+  return "0";
+}
+
+/** W–L record with an en dash, for example 12–7. */
+export function formatRecord(wins: number, losses: number): string {
+  return `${wins}\u2013${losses}`;
+}
+
+/** Two-digit rank label. The number itself is the API rank, including ties. */
+export function formatRank(rank: number): string {
+  return String(Math.trunc(rank)).padStart(2, "0");
+}
+
+/** Calendar label such as "Nov 2026". */
+export function formatMonthLabel(year: number, month: number): string {
+  const name = MONTHS[month - 1];
+  if (!name) return "—";
+  return `${name} ${year}`;
+}
+
+export function isCurrentUtcMonth(year: number, month: number, now = new Date()): boolean {
+  return now.getUTCFullYear() === year && now.getUTCMonth() + 1 === month;
+}
+
+/** Game scores with player A first: "21–18 · 18–21". */
+export function formatGameScores(scores: [number, number][] | null | undefined): string | null {
+  if (!scores || scores.length === 0) return null;
+  return scores.map(([a, b]) => `${a}\u2013${b}`).join(" · ");
 }

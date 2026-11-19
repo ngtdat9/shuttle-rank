@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { BottomNav } from "@/components/layout/bottom-nav";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { TopNav } from "@/components/layout/top-nav";
 
@@ -9,12 +10,19 @@ type AppShellProps = {
 
 export function AppShell({ children }: AppShellProps) {
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col px-2 py-2 sm:px-4 sm:py-4">
-      <div className="flex min-h-[calc(100dvh-1rem)] flex-1 flex-col overflow-hidden rounded-[20px] border border-border bg-background sm:min-h-[calc(100dvh-2rem)] sm:rounded-[28px]">
-        <TopNav />
-        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
-        <SiteFooter />
-      </div>
+    <div className="flex min-h-full flex-col pb-16 md:pb-0">
+      <a
+        href="#content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:rounded-full focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:text-primary-foreground"
+      >
+        Skip to content
+      </a>
+      <TopNav />
+      <main id="content" className="mx-auto w-full max-w-[1120px] flex-1 px-4 py-6 md:px-8 md:py-8">
+        {children}
+      </main>
+      <SiteFooter />
+      <BottomNav />
     </div>
   );
 }

@@ -7,6 +7,7 @@ type ErrorStateProps = {
   title?: string;
   message?: string;
   onRetry?: () => void;
+  retryLabel?: string;
   className?: string;
 };
 
@@ -14,13 +15,14 @@ export function ErrorState({
   title = "Something went wrong",
   message = "This view could not be loaded.",
   onRetry,
+  retryLabel = "Try again",
   className,
 }: ErrorStateProps) {
   return (
     <div
       role="alert"
       className={cn(
-        "flex flex-col items-center justify-center gap-3 rounded-[22px] border border-border bg-card px-6 py-12 text-center",
+        "flex flex-col items-start gap-3 rounded-[20px] border border-border border-l-[3px] border-l-destructive bg-card px-5 py-6 text-left",
         className,
       )}
     >
@@ -32,8 +34,8 @@ export function ErrorState({
         <p className="mt-1 text-sm text-muted-foreground">{message}</p>
       </div>
       {onRetry ? (
-        <Button type="button" variant="outline" className="rounded-full" onClick={onRetry}>
-          Try again
+        <Button type="button" variant="outline" className="h-10 rounded-full px-4" onClick={onRetry}>
+          {retryLabel}
         </Button>
       ) : null}
     </div>
