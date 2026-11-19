@@ -23,9 +23,10 @@ function parseDateInput(value: string | Date): Date {
 }
 
 /**
- * Formats a date with a fixed locale (en-US) and time zone (UTC) so server and
- * client render identical text and hydration never mismatches.
- * Date-only strings (`YYYY-MM-DD`) are read as a calendar date (UTC midnight, shown in UTC).
+ * Formats a date with a fixed default locale (en-US) so server and client agree.
+ * Date-only strings (`YYYY-MM-DD`) are calendar dates: parsed and shown in UTC.
+ * Datetimes are shown in `options.timeZone`, defaulting to UTC (deterministic for
+ * server render). Pass the viewer's zone after mount, see `LocalDateTime`.
  */
 export function formatDate(
   value: string | Date,
@@ -33,6 +34,7 @@ export function formatDate(
   locale: Intl.LocalesArgument = "en-US",
 ): string {
   const date = parseDateInput(value);
+  const dateOnly = typeof value === "string" && DATE_ONLY.test(value);
   if (Number.isNaN(date.getTime())) {
     return "—";
   }
@@ -40,7 +42,7 @@ export function formatDate(
   return new Intl.DateTimeFormat(locale, {
     ...DEFAULT_DATE_OPTIONS,
     ...options,
-    timeZone: "UTC",
+    timeZone: dateOnly ? "UTC" : (options?.timeZone ?? "UTC"),
   }).format(date);
 }
 
