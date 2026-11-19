@@ -1,4 +1,7 @@
+"use client";
+
 import type { ReactNode } from "react";
+import { usePathname } from "next/navigation";
 
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -9,6 +12,11 @@ type AppShellProps = {
 };
 
 export function AppShell({ children }: AppShellProps) {
+  const pathname = usePathname();
+  if (pathname.startsWith("/admin")) {
+    return <>{children}</>;
+  }
+
   return (
     <div className="flex min-h-full flex-col pb-16 md:pb-0">
       <a
@@ -18,7 +26,10 @@ export function AppShell({ children }: AppShellProps) {
         Skip to content
       </a>
       <TopNav />
-      <main id="content" className="mx-auto w-full max-w-[1120px] flex-1 px-4 py-6 md:px-8 md:py-8">
+      <main
+        id="content"
+        className="mx-auto w-full max-w-[1120px] flex-1 px-4 py-6 md:px-8 md:py-8"
+      >
         {children}
       </main>
       <SiteFooter />
