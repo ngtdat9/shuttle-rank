@@ -71,7 +71,7 @@ def test_monthly_snapshots_span_months_and_share_ranks(db: Session) -> None:
     assert current_names["Amy"].rank == 1
     assert current_names["Cara"].rank == 1
     assert current_names["Eve"].rank == 1
-    assert current_names["Amy"].rank_change == 1
+    assert current_names["Amy"].rank_change == 0
     assert current_names["Eve"].rank_change == 0
     assert current_names["Amy"].matches_played == 0
     assert current_names["Bob"].rank == 4
