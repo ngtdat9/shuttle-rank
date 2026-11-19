@@ -24,17 +24,17 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 
 | ID | Task | Agent | Depends on | Status | Acceptance criteria | Test results |
 |---|---|---|---|---|---|---|
-| P2-01 | Player service and match processing: transactional rating updates, rating history, duplicate prevention, chronological replay (backdated, correct, cancel, delete), monthly snapshot rebuild, stats/ranking/head-to-head services | be | P1-01, P1-04 | IN_PROGRESS | Contract business rules; replay equals full recalculation | — (merged with P2-02 into one task) |
-| P2-02 | Public read endpoints (dashboard, rankings, monthly, players, matches, head-to-head, achievements read) | be | P2-01 | IN_PROGRESS | Responses match `docs/API.md` | — |
-| P2-03 | Spec-first QA tests: Elo, matches, replay, rankings, head-to-head | qa | P1-01, P1-04 | TODO | Tests derived from the contract | — |
+| P2-01 | Player service and match processing: transactional rating updates, rating history, duplicate prevention, chronological replay (backdated, correct, cancel, delete), monthly snapshot rebuild, stats/ranking/head-to-head services | be | P1-01, P1-04 | COMPLETED | Contract business rules; replay equals full recalculation | Branch: 54 passed. On `main` after merging with P3-01: 92 passed, ruff clean. Orchestrator reviewed the replay engine |
+| P2-02 | Public read endpoints (dashboard, rankings, monthly, players, matches, head-to-head, achievements read) | be | P2-01 | COMPLETED | Responses match `docs/API.md` | — |
+| P2-03 | Spec-first QA tests: Elo, matches, replay, rankings, head-to-head | qa | P1-01, P1-04 | IN_PROGRESS | Tests derived from the contract | — |
 
 ## Phase 3: Authentication and admin backend
 
 | ID | Task | Agent | Depends on | Status | Acceptance criteria | Test results |
 |---|---|---|---|---|---|---|
 | P3-01 | Auth: Supabase JWT (HS256 secret or JWKS), `admin_users` allowlist, isolated dev mode, rate limit, admin bootstrap CLI | be | P1-01 | COMPLETED | 401/403/429 behaviour; dev mode refused in production | pytest 64 passed; ruff clean; orchestrator security review OK. Ran in parallel with P2-01 |
-| P3-02 | Admin player and match endpoints with audit logs; admin stats and audit-log endpoints | be | P3-01 | TODO | Writes audited; manual rating edits impossible | — |
-| P3-03 | Dev seed script (`python -m app.cli seed-demo`), refused in production | be | P3-02 | TODO | Seeds through services, not raw ratings | — |
+| P3-02 | Admin player and match endpoints with audit logs; admin stats and audit-log endpoints | be | P3-01 | IN_PROGRESS | Writes audited; manual rating edits impossible | — |
+| P3-03 | Dev seed script (`python -m app.cli seed-demo`), refused in production | be | P3-02 | IN_PROGRESS | Seeds through services, not raw ratings | — (combined with P3-02) |
 
 ## Phase 4: Public frontend
 
