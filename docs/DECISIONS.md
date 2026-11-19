@@ -20,8 +20,8 @@ Owned by the `orchestrator` agent. Record every decision that changes architectu
 ## D-001: Multi-agent development workflow
 - Status: accepted
 - Date: 2026-11-19
-- Context: The project will be built by Cursor agents, one phase at a time.
-- Decision: The `orchestrator` coordinates the `backend-engineer`, `frontend-engineer`, `qa-engineer`, and `product-ux` agents (definitions in `.cursor/agents/`). Each specialist owns specific files. Concurrent code changes use separate git worktrees on `task/<id>-<slug>` branches. The orchestrator reviews every diff, and a task is done only after QA PASS and merge.
+- Context: The project will be built by AI agents, one phase at a time.
+- Decision: The `orchestrator` coordinates the `backend-engineer`, `frontend-engineer`, `qa-engineer`, and `product-ux` agents (definitions in `.claude/agents/`, see D-021). Each specialist owns specific files. Concurrent code changes use separate git worktrees on `task/<id>-<slug>` branches. The orchestrator reviews every diff, and a task is done only after QA PASS and merge.
 - Consequences: Requires a git repository. `docs/TASKS.md` is the single status board.
 
 ## D-002: Modular monolith
@@ -78,7 +78,7 @@ Owned by the `orchestrator` agent. Record every decision that changes architectu
 - Date: 2026-11-19
 - Context: `docs/BUILD_PLAN.md` specifies `requirements.txt` but no frontend package manager or linters.
 - Decision (proposed): Backend uses `pip` + `venv` + `requirements.txt`, with Ruff for lint and format and pytest. Frontend uses `npm`, ESLint (Next.js default), and Prettier.
-- Consequences: `.cursor/setup-worktree.sh` assumes `npm` and `backend/.venv`.
+- Consequences: `scripts/setup-worktree.sh` assumes `npm` and `backend/.venv`.
 
 ## D-010: Location of the build plan
 - Status: accepted
@@ -169,3 +169,10 @@ The following decisions were made autonomously by the orchestrator during the un
 - Context: The admin match list can include soft-deleted matches (`include_deleted=true`), but `Match` had no field to mark them. Requested by frontend-engineer in P5-03.
 - Decision: Add `deleted_at: string | null` to `Match`. It is always null on public endpoints, which never return deleted matches.
 - Consequences: Additive, non-breaking. The backend adds it in the next backend task.
+
+## D-021: Move the agent setup from Cursor to Claude Code
+- Status: accepted
+- Date: 2026-11-19
+- Context: Cursor subagents hit a usage limit mid-build. The owner chose to continue in Claude Code with the same multi-agent workflow.
+- Decision: Specialists live in `.claude/agents/` with `model: sonnet`. The main Claude Code session acts as the orchestrator; its workflow is in the root `CLAUDE.md`. The `.cursor/rules/*.mdc` files became `CLAUDE.md`, `backend/CLAUDE.md` and `frontend/CLAUDE.md`. `.cursor/setup-worktree.sh` moved to `scripts/setup-worktree.sh`. `.cursor/` was removed.
+- Consequences: Escalation to Opus is a per-launch model override. Worktree layout and branch naming are unchanged.

@@ -1,9 +1,3 @@
----
-description: Next.js, TypeScript, Tailwind, shadcn/ui, and Recharts rules for the frontend
-globs: frontend/**
-alwaysApply: false
----
-
 # Frontend rules
 
 ## Structure

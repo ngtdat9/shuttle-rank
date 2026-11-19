@@ -12,7 +12,7 @@
 3. `docs/API.md` (contract; includes D-020 `Match.deleted_at`)
 4. `docs/DECISIONS.md` (D-001..D-020)
 5. `docs/REQUIREMENTS.md`, `docs/ux/*`, `docs/ELO_ALGORITHM.md`
-6. `.cursor/rules/project.mdc`, `backend.mdc`, `frontend.mdc`
+6. `CLAUDE.md`, `backend/CLAUDE.md`, `frontend/CLAUDE.md`, `.claude/agents/*`
 
 Hard rules: backend owns Elo; frontend never calculates ratings; admin writes are backend-enforced; no secrets in git or `NEXT_PUBLIC_*`.
 
@@ -105,4 +105,4 @@ Document placeholders in `.env.example` and `docs/DEPLOYMENT.md`; keep building 
 
 ## Agent note for Claude Code
 
-Cursor custom agents under `.cursor/agents/` are Cursor-specific. Work as a single engineer following the same ownership and phase order. Prefer small commits. Update `docs/TASKS.md` after each milestone.
+Agents were ported to `.claude/agents/` (D-021). The main session is the orchestrator per `CLAUDE.md` and delegates to the Sonnet specialists. Prefer small commits. Update `docs/TASKS.md` after each milestone.

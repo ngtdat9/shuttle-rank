@@ -1,9 +1,3 @@
----
-description: FastAPI, SQLAlchemy, Alembic, and Elo rules for the backend
-globs: backend/**
-alwaysApply: false
----
-
 # Backend rules
 
 ## Layering
