@@ -60,29 +60,98 @@ Owned by the `orchestrator` agent. Record every decision that changes architectu
 - Consequences: Frontend work that consumes an endpoint starts only after that endpoint's contract is approved.
 
 ## D-007: Elo integer rounding method
-- Status: proposed (needs the user's confirmation before `P2-01`)
+- Status: accepted (autonomous build)
 - Date: 2026-11-19
 - Context: The plan requires one symmetric integer delta but does not specify rounding. Python's `round()` uses banker's rounding.
 - Decision (proposed): `delta = floor(K * (1 - E_winner) + 0.5)`, that is, round half up computed from the winner's perspective, then apply `+delta` to the winner and `-delta` to the loser. This gives 16 at equal 1500 ratings.
 - Consequences: Must be documented in `docs/ELO_ALGORITHM.md` and covered by rounding tests.
 
 ## D-008: Frontend/backend type sharing
-- Status: proposed
+- Status: accepted
 - Date: 2026-11-19
 - Context: TypeScript types must stay in sync with the Pydantic schemas.
 - Decision (proposed): Start with hand-written types in `frontend/types/`, checked against `docs/API.md` in review and QA. Consider generating them from OpenAPI (for example with `openapi-typescript`) if drift becomes a problem.
 - Consequences: Adds no dependency for now.
 
 ## D-009: Tooling defaults
-- Status: proposed
+- Status: accepted
 - Date: 2026-11-19
 - Context: `docs/BUILD_PLAN.md` specifies `requirements.txt` but no frontend package manager or linters.
 - Decision (proposed): Backend uses `pip` + `venv` + `requirements.txt`, with Ruff for lint and format and pytest. Frontend uses `npm`, ESLint (Next.js default), and Prettier.
 - Consequences: `.cursor/setup-worktree.sh` assumes `npm` and `backend/.venv`.
 
 ## D-010: Location of the build plan
-- Status: proposed
+- Status: accepted
 - Date: 2026-11-19
-- Context: The build plan is at the repo root (`docs/BUILD_PLAN.md`), but its own prompt templates refer to `docs/BUILD_PLAN.md`.
-- Decision (proposed): Keep it at the root for now. If it moves to `docs/`, update the references in `.cursor/agents/`, `.cursor/rules/project.mdc`, and these docs.
-- Consequences: None until it moves.
+- Context: The owner moved the plan to `docs/BUILD_PLAN.md`.
+- Decision: All agent, rule, and doc references point to `docs/BUILD_PLAN.md`.
+- Consequences: None.
+
+---
+
+The following decisions were made autonomously by the orchestrator during the unattended build (owner brief, 2026-11-19). The owner explicitly asked for sensible defaults without confirmation.
+
+## D-011: Scope of the first release
+- Status: accepted
+- Date: 2026-11-19
+- Context: `BUILD_PLAN.md` section 14 defers tournaments, monthly snapshots, and achievements. The owner's brief requires them in the first build.
+- Decision: Build all of them, still in phase order: core Elo and matches first, extras after.
+- Consequences: More surface to test. Avatar uploads and CSV export stay out of scope.
+
+## D-012: Orchestrator authors the initial API contract
+- Status: accepted
+- Date: 2026-11-19
+- Context: Backend and frontend foundations ran in parallel, and the contract is the cross-agent integration point.
+- Decision: The orchestrator wrote `docs/API.md`. The backend-engineer owns it from Phase 2 onward, and changes still go through the orchestrator.
+- Consequences: None.
+
+## D-013: Match deletion is a soft delete
+- Status: accepted
+- Date: 2026-11-19
+- Context: The brief asks for "delete a match with proper rating recalculation", while the plan says to preserve history and keep an audit trail.
+- Decision: `DELETE /admin/matches/{id}` sets `matches.deleted_at`. The match is then excluded from ratings and public reads, ratings are replayed, and the action is audited.
+- Consequences: Data is recoverable from the database and the audit log.
+
+## D-014: Replay strategy
+- Status: accepted
+- Date: 2026-11-19
+- Context: Corrections must recalculate later ratings chronologically.
+- Decision: For any change that affects ratings:
+  1. Find the earliest affected match position, ordered by (`match_date`, `created_at`, `id`).
+  2. Restore each player's rating from before that point, using their last `rating_history.new_rating` or 1500.
+  3. Delete `rating_history` rows from that point on and reprocess the later rated matches.
+  4. Recompute `current_rating` and `highest_rating` from the full history, then rebuild monthly snapshots.
+
+  All of this happens in one transaction, with an audit entry recording the previous result. A new match dated after the latest rated match is processed incrementally.
+- Consequences: Simple and correct at club scale (hundreds of matches). Rating history is rebuilt only for affected matches. The audit log preserves what was there before.
+
+## D-015: Tournament bracket storage
+- Status: accepted
+- Date: 2026-11-19
+- Context: The plan lists tournaments and participants but not bracket slots.
+- Decision: Add a `bracket_matches` table: `round`, `position`, two nullable player slots, `winner_id`, `is_bye`, and a nullable unique `match_id`. The next slot is derived as `(round + 1, position // 2)`, with slot A for even positions and slot B for odd ones. Tournament results go through the normal match service.
+- Consequences: Correcting, canceling, or deleting a tournament match is only allowed while the next bracket match has no result.
+
+## D-016: Admin allowlist and dev authentication
+- Status: accepted
+- Date: 2026-11-19
+- Context: The plan requires a backend-controlled allowlist, plus an isolated dev stub while Supabase isn't configured. The brief lists "admin users" as an entity.
+- Decision:
+  - An `admin_users` table keyed by Supabase `auth_user_id` (the JWT `sub`), bootstrapped from `ADMIN_BOOTSTRAP_USER_ID`/`ADMIN_BOOTSTRAP_EMAIL` or a CLI command.
+  - JWT verification uses HS256 with `SUPABASE_JWT_SECRET` if it is set, otherwise the project JWKS.
+  - `AUTH_MODE=dev` accepts `DEV_ADMIN_TOKEN` only when `APP_ENV` is not `production`, and the app refuses to start otherwise.
+  - On the frontend, `NEXT_PUBLIC_AUTH_MODE=dev` shows a dev-token login instead of Supabase.
+- Consequences: Real Supabase login needs the owner's project credentials (an external blocker, documented).
+
+## D-017: Dashboard aggregate endpoint
+- Status: accepted
+- Date: 2026-11-19
+- Context: The dashboard needs leader, totals, recent matches, progression, active tournament, and recent achievements.
+- Decision: Add `GET /api/v1/dashboard` so the page doesn't need many round trips. Stats such as win rate, form, and 30-day change are computed in the backend and returned by the API.
+- Consequences: The frontend never derives ratings or rankings.
+
+## D-018: App name and visual identity
+- Status: accepted
+- Date: 2026-11-19
+- Decision: The app is "Shuttle Rank". The dark design system follows the TENOIS reference, adapted for badminton, using the tokens from the owner's brief.
+- Consequences: None.
