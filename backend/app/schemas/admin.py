@@ -52,11 +52,11 @@ class MatchCreateRequest(APISchema):
     match_date: datetime
     status: Literal["completed", "disputed"] = "completed"
     game_scores: list[tuple[int, int]] | None = None
-    notes: str | None = None
+    notes: str | None = Field(default=None, max_length=500)
 
 
 class MatchUpdateRequest(APISchema):
-    notes: str | None = None
+    notes: str | None = Field(default=None, max_length=500)
     game_scores: list[tuple[int, int]] | None = None
 
 
@@ -180,7 +180,7 @@ class TournamentMatchRequest(APISchema):
     winner_id: UUID
     match_date: datetime
     game_scores: list[tuple[int, int]] | None = None
-    notes: str | None = None
+    notes: str | None = Field(default=None, max_length=500)
 
 
 class AchievementCreateRequest(APISchema):

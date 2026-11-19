@@ -190,10 +190,6 @@ def test_monthly_equal_results_share_a_rank_and_skip(db: Session) -> None:
     assert stored == ranks
 
 
-@pytest.mark.xfail(
-    reason="BUG-P2-03-03: tie key is (rating, wins); R-LB-02 says equal ratings share rank",
-    strict=True,
-)
 def test_monthly_equal_ratings_share_a_rank_when_wins_differ(db: Session) -> None:
     """R-LB-02: equal ratings share a rank even when the win counts differ."""
     ace = make_player(db, "Ace")

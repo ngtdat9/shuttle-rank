@@ -189,18 +189,8 @@ def test_match_more_than_one_day_in_the_future_is_rejected(db: Session) -> None:
     [
         [[21, 19]] * 6,
         [[-1, 21]],
-        pytest.param(
-            [[21, 100]],
-            marks=pytest.mark.xfail(
-                reason="BUG-P2-03-01: game score >99 accepted (R-MA-02 says 0-99)", strict=True
-            ),
-        ),
-        pytest.param(
-            [[100, 0]],
-            marks=pytest.mark.xfail(
-                reason="BUG-P2-03-01: game score >99 accepted (R-MA-02 says 0-99)", strict=True
-            ),
-        ),
+        [[21, 100]],
+        [[100, 0]],
         [[21]],
         [[21, 19, 3]],
         [[21, True]],
@@ -229,9 +219,6 @@ def test_invalid_game_scores_are_rejected(db: Session, scores: object) -> None:
     assert _match_count(db) == 0
 
 
-@pytest.mark.xfail(
-    reason="BUG-P2-03-02: create_match accepts notes over 500 chars (R-MA-02)", strict=True
-)
 def test_notes_longer_than_500_characters_are_rejected(db: Session) -> None:
     ann = make_player(db, "Notes Ann")
     bob = make_player(db, "Notes Bob")
