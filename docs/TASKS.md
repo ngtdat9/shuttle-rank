@@ -26,7 +26,7 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 |---|---|---|---|---|---|---|
 | P2-01 | Player service and match processing: transactional rating updates, rating history, duplicate prevention, chronological replay (backdated, correct, cancel, delete), monthly snapshot rebuild, stats/ranking/head-to-head services | be | P1-01, P1-04 | COMPLETED | Contract business rules; replay equals full recalculation | Branch: 54 passed. On `main` after merging with P3-01: 92 passed, ruff clean. Orchestrator reviewed the replay engine |
 | P2-02 | Public read endpoints (dashboard, rankings, monthly, players, matches, head-to-head, achievements read) | be | P2-01 | COMPLETED | Responses match `docs/API.md` | — |
-| P2-03 | Spec-first QA tests: Elo, matches, replay, rankings, head-to-head | qa | P1-01, P1-04 | IN_PROGRESS | Tests derived from the contract | — |
+| P2-03 | Spec-first QA tests: Elo, matches, replay, rankings, head-to-head | qa | P1-01, P1-04 | BLOCKED | Tests derived from the contract | Agent hit usage limit. WIP committed on `task/P2-03-qa-core`: 37 passed, 6 failed (game_scores edge cases, notes length, monthly/rank ties). See docs/HANDOFF.md |
 
 ## Phase 3: Authentication and admin backend
 
@@ -81,6 +81,15 @@ Verified working: dashboard data, leaderboard (form ordering, shared ranks, delt
 ---
 
 ## Log
+
+| Date | Task | Change |
+|---|---|---|
+| 2026-11-19 | P3-02 | Merged admin API/seed. |
+| 2026-11-19 | P2-03 | QA agent usage-limited; WIP tests on `task/P2-03-qa-core`. |
+| 2026-11-19 | P6-03a | Frontend fix agent usage-limited; no code written. Restart from HANDOFF. |
+| 2026-11-19 | — | Cursor usage exhausted; handoff written to `docs/HANDOFF.md` for Claude Code. |
+
+## Log (earlier)
 
 | Date | Task | Change |
 |---|---|---|
