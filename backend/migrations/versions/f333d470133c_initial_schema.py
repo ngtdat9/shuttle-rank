@@ -29,7 +29,7 @@ def upgrade() -> None:
         sa.Column("icon", sa.String(length=64), server_default="award", nullable=False),
         sa.Column("criteria_type", sa.String(length=64), server_default="manual", nullable=False),
         sa.Column("criteria_value", sa.Integer(), nullable=True),
-        sa.Column("is_active", sa.Boolean(), server_default=sa.text("1"), nullable=False),
+        sa.Column("is_active", sa.Boolean(), server_default=sa.true(), nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -51,7 +51,7 @@ def upgrade() -> None:
         sa.Column("auth_user_id", sa.String(length=255), nullable=False),
         sa.Column("email", sa.String(length=255), nullable=False),
         sa.Column("display_name", sa.String(length=120), nullable=True),
-        sa.Column("is_active", sa.Boolean(), server_default=sa.text("1"), nullable=False),
+        sa.Column("is_active", sa.Boolean(), server_default=sa.true(), nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -93,7 +93,7 @@ def upgrade() -> None:
         sa.Column("avatar_url", sa.String(length=2048), nullable=True),
         sa.Column("current_rating", sa.Integer(), server_default="1500", nullable=False),
         sa.Column("highest_rating", sa.Integer(), server_default="1500", nullable=False),
-        sa.Column("is_active", sa.Boolean(), server_default=sa.text("1"), nullable=False),
+        sa.Column("is_active", sa.Boolean(), server_default=sa.true(), nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -281,7 +281,7 @@ def upgrade() -> None:
         sa.Column("player_b_id", sa.Uuid(), nullable=True),
         sa.Column("winner_id", sa.Uuid(), nullable=True),
         sa.Column("match_id", sa.Uuid(), nullable=True),
-        sa.Column("is_bye", sa.Boolean(), server_default=sa.text("0"), nullable=False),
+        sa.Column("is_bye", sa.Boolean(), server_default=sa.false(), nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
