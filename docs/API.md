@@ -79,6 +79,7 @@ Match {
   game_scores: [number, number][] | null;   // per game, player_a score first
   notes: string | null;
   rating_changes: RatingChange[];     // empty unless the match was rated (completed)
+  deleted_at: string | null;          // always null on public endpoints; set on admin lists with include_deleted
   created_at: string; updated_at: string
 }
 

@@ -162,3 +162,10 @@ The following decisions were made autonomously by the orchestrator during the un
 - Context: `create-next-app` 16.4 enabled the experimental `cacheComponents` and `partialPrefetching` options. With them on, every uncached fetch must sit inside a Suspense boundary or the build fails.
 - Decision: Turn both options off. Public pages are server components that fetch from the API with `cache: "no-store"`, so ratings are always fresh. Interactive pieces are client components.
 - Consequences: Simpler data flow. The cost is one dynamic render per request, which is negligible at club scale.
+
+## D-020: `deleted_at` on Match responses
+- Status: accepted
+- Date: 2026-11-19
+- Context: The admin match list can include soft-deleted matches (`include_deleted=true`), but `Match` had no field to mark them. Requested by frontend-engineer in P5-03.
+- Decision: Add `deleted_at: string | null` to `Match`. It is always null on public endpoints, which never return deleted matches.
+- Consequences: Additive, non-breaking. The backend adds it in the next backend task.
