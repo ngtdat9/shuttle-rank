@@ -57,14 +57,14 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 | ID | Task | Agent | Depends on | Status | Acceptance criteria | Test results |
 |---|---|---|---|---|---|---|
 | P6-01 | Backend QA: every endpoint, authorization matrix, persistence, tournaments | qa | P5-01 | DONE | `BUILD_PLAN.md` section 11 plus the brief's section 9 | Merged. QA PASS: authz matrix on all 24 admin ops (dev, Supabase HS256, JWKS, production), contract vs OpenAPI, no rating-edit fields, migrations up/down/up, restart persistence, seed sanity, error envelope. 176 tests |
-| P6-02 | Frontend QA: navigation, integration against the seeded backend, states, responsive layouts, admin protection, production build | qa | P5-02, P5-03 | IN_PROGRESS | All pages work against the real API | — |
+| P6-02 | Frontend QA: navigation, integration against the seeded backend, states, responsive layouts, admin protection, production build | qa | P5-02, P5-03 | DONE | All pages work against the real API | QA PASS on production build vs seeded API: all public routes match the API, no console or hydration errors, responsive at 390/1024/1440, error and empty states, admin redirects and confirmations, full tournament flow, types match the contract, no secrets in the bundle |
 | P6-03 | Fix defects found in QA | be/fe | P6-01, P6-02 | TODO | QA re-verification passes | P6-03a merged (BUG-02..05, D-020 type) |
 
 ### Defects found by orchestrator integration check (2026-11-19, live API + seeded temp DB)
 
 | ID | Defect | Severity | Fix task | Status |
 |---|---|---|---|---|
-| BUG-01 | Dashboard multi-player `RatingChart` draws no lines (legend only); single-series profile chart works | High | P6-03 | IN_QA (not reproducible on seeded data in P6-03a; re-check in P6-02) |
+| BUG-01 | Dashboard multi-player `RatingChart` draws no lines (legend only); single-series profile chart works | High | P6-03 | CLOSED: cannot reproduce (P6-03a and P6-02: 5/5 lines at 390/1024/1440) |
 | BUG-02 | Hydration mismatch warnings in dev on dashboard (`components/club/dashboard-view.tsx` around line 165, date/locale formatting) and player profile (5 issues) | Medium | P6-03 | DONE (P6-03a: viewer-local time after mount, deterministic SSR) |
 | BUG-03 | Desktop header nav wraps to two rows at 1024px width | Low | P6-03 | DONE (P6-03a) |
 | BUG-04 | Dashboard leader card shows the player name twice (heading and avatar label) | Low | P6-03 | DONE (P6-03a) |
@@ -72,7 +72,8 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 | BUG-06 | `game_scores` sides above 99 accepted (R-MA-02); `match_service._validate_game_scores` | Medium | P2-04 | DONE (P2-04) |
 | BUG-07 | Notes over 500 chars accepted (R-MA-02); `match_service._validate_notes` (check PATCH too) | Medium | P2-04 | DONE (P2-04) |
 | BUG-08 | Rank ties keyed on (rating, wins) instead of rating only (R-LB-02, OQ-10); `ranking_service.compute_standings`, `monthly_service._assign_ranks` | Medium | P2-04 | DONE (P2-04) |
-| BUG-09 | Rating chart x-axis labels use UTC month/day; can be off by one day vs local near midnight | Low | P6-03 | TODO |
+| BUG-09 | Rating chart x-axis labels use UTC month/day; can be off by one day vs local near midnight | Low | P6-03 | IN_PROGRESS (P6-03b) |
+| BUG-10 | `/players/[id]` shows five stacked "Couldn't reach" panels when the API is down | Low | P6-03b | IN_PROGRESS |
 
 Verified working: dashboard data, leaderboard (form ordering, shared ranks, deltas), player profile, head-to-head totals, all public routes return 200 against the live API, and zero-sum ratings (8 players sum to 12000).
 
@@ -80,7 +81,7 @@ Verified working: dashboard data, leaderboard (form ordering, shared ranks, delt
 
 | ID | Task | Agent | Depends on | Status | Acceptance criteria | Test results |
 |---|---|---|---|---|---|---|
-| P7-01 | Postgres portability check (Docker Postgres if available), Dockerfile, `render.yaml`, Vercel config, env documentation, `docs/DEPLOYMENT.md` | be/orch | P6-03 | TODO | Migrations run on Postgres; config complete | — |
+| P7-01 | Postgres portability check (Docker Postgres if available), Dockerfile, `render.yaml`, Vercel config, env documentation, `docs/DEPLOYMENT.md` | be/orch | P6-03 | IN_PROGRESS | Migrations run on Postgres; config complete | Started in parallel with P6-02 (backend/infra only; no frontend overlap) |
 | P7-02 | `README.md`, `docs/FINAL_REPORT.md` | orch | P7-01 | TODO | Accurate, with real test results | — |
 
 ---
