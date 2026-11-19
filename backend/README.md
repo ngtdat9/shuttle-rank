@@ -1,6 +1,6 @@
 # Badminton Club Ranking API
 
-FastAPI service for the club ranking site. It owns players, matches, Elo, and admin writes. This phase sets up the database, the health check, and the Elo formula. Match processing comes later.
+FastAPI service for the club ranking site. It owns players, matches, Elo ratings, and admin writes.
 
 Requires Python 3.12.
 
@@ -49,7 +49,18 @@ python -m app.cli list-admins
 python -m app.cli deactivate-admin --auth-user-id <uuid>
 ```
 
-The UUID is stored in canonical lowercase form, which is the form Supabase puts in `sub`. `create-admin` updates the existing row when that id is already present. A later `seed-demo` subcommand can be added beside these.
+The UUID is stored in canonical lowercase form, which is the form Supabase puts in `sub`. `create-admin` updates the existing row when that id is already present.
+
+## Demo data
+
+`seed-demo` loads eight players, about ten weeks of club matches, five achievement definitions, and a few awards. Match results go through the match service, so ratings are calculated rather than typed in. Pairings and scores come from `random.Random` with a fixed seed, so two runs in the same week produce the same results. Tournaments are not included.
+
+```bash
+python -m app.cli seed-demo
+python -m app.cli seed-demo --reset
+```
+
+The command refuses to run when `APP_ENV=production`. It also refuses when the database already has players, unless `--reset` is set. `--reset` deletes players, matches, rating history, monthly snapshots, tournaments, brackets, achievements, awards, and audit logs, in an order foreign keys allow. It does not remove `admin_users`. `--reset` is refused in production as well, and it does not delete anything in that case.
 
 Failed admin authentication is limited to 20 attempts per 5 minutes per client IP. Further admin requests from that IP get `429` until the window clears. Counts are kept in memory in this process, which is enough for a single Render instance. The key is the client address the server reports. Behind Render's proxy, start uvicorn with proxy headers trusted so that address is the visitor, for example `--proxy-headers --forwarded-allow-ips='*'`.
 

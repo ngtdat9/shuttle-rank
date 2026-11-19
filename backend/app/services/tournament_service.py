@@ -1,8 +1,14 @@
-"""Read-only tournament and bracket queries. Writes arrive in a later task."""
+"""Tournament reads, and the hook match corrections call before replay.
+
+Bracket writes arrive in a later task. ``on_match_changed`` is the extension
+point those writes will replace: it ignores club matches and rejects
+tournament matches until the bracket can move with the result.
+"""
 
 import uuid
 from collections import defaultdict
 from datetime import date
+from typing import Any, Literal
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -27,6 +33,34 @@ from app.services.ordering import ensure_utc
 from app.services.serialize import load_players, player_summary
 
 _STATUSES = {"draft", "in_progress", "completed", "canceled"}
+_MATCH_CHANGES = {"correct", "cancel", "delete"}
+
+
+def on_match_changed(
+    db: Session,
+    match: Match,
+    before: dict[str, Any],
+    *,
+    change: Literal["correct", "cancel", "delete"],
+) -> None:
+    """Update a bracket after a match result changes. Does not commit.
+
+    ``_correct_match``, ``_cancel_match``, and ``_delete_match`` call this
+    after the match row has been updated and flushed, and before rating
+    replay. ``before`` is the snapshot from before that update. ``change``
+    is ``correct``, ``cancel``, or ``delete``. ``db`` is the caller's session.
+
+    Matches with no tournament are ignored. A tournament match raises until
+    this function updates advancement and enforces the next-slot rule. The
+    caller then rolls the match change back.
+    """
+    if not isinstance(before, dict):
+        raise BusinessRuleError("Match snapshot is missing")
+    if change not in _MATCH_CHANGES:
+        raise BusinessRuleError("Unknown match change")
+    if match.tournament_id is None:
+        return
+    raise BusinessRuleError("Tournament match results are managed through the tournament bracket")
 
 
 def list_tournaments(db: Session, *, status: str | None = None) -> TournamentListResponse:

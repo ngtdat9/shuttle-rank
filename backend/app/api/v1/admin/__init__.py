@@ -9,7 +9,11 @@ dependency once per request.
 from fastapi import APIRouter, Depends
 
 from app.api.deps import require_admin
+from app.api.v1.admin.matches import router as matches_router
 from app.api.v1.admin.me import router as me_router
+from app.api.v1.admin.overview import router as overview_router
+from app.api.v1.admin.players import router as players_router
+from app.api.v1.admin.rankings import router as rankings_router
 
 admin_router = APIRouter(
     prefix="/admin",
@@ -17,5 +21,9 @@ admin_router = APIRouter(
     tags=["admin"],
 )
 admin_router.include_router(me_router)
+admin_router.include_router(overview_router)
+admin_router.include_router(players_router)
+admin_router.include_router(matches_router)
+admin_router.include_router(rankings_router)
 
 __all__ = ["admin_router"]
