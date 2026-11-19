@@ -59,6 +59,18 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 | P6-02 | Frontend QA: navigation, integration against the seeded backend, states, responsive layouts, admin protection, production build | qa | P5-02, P5-03 | TODO | All pages work against the real API | — |
 | P6-03 | Fix defects found in QA | be/fe | P6-01, P6-02 | TODO | QA re-verification passes | — |
 
+### Defects found by orchestrator integration check (2026-11-19, live API + seeded temp DB)
+
+| ID | Defect | Severity | Fix task | Status |
+|---|---|---|---|---|
+| BUG-01 | Dashboard multi-player `RatingChart` draws no lines (legend only); single-series profile chart works | High | P6-03 | TODO |
+| BUG-02 | Hydration mismatch warnings in dev on dashboard (`components/club/dashboard-view.tsx` around line 165, date/locale formatting) and player profile (5 issues) | Medium | P6-03 | TODO |
+| BUG-03 | Desktop header nav wraps to two rows at 1024px width | Low | P6-03 | TODO |
+| BUG-04 | Dashboard leader card shows the player name twice (heading and avatar label) | Low | P6-03 | TODO |
+| BUG-05 | Rating chart curve overshoots below and above real values (spline); use monotone or linear | Low | P6-03 | TODO |
+
+Verified working: dashboard data, leaderboard (form ordering, shared ranks, deltas), player profile, head-to-head totals, all public routes return 200 against the live API, and zero-sum ratings (8 players sum to 12000).
+
 ## Phase 7: Deployment preparation
 
 | ID | Task | Agent | Depends on | Status | Acceptance criteria | Test results |
