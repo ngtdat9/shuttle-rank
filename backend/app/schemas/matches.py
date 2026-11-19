@@ -23,6 +23,7 @@ class Match(APISchema):
     game_scores: list[tuple[int, int]] | None
     notes: str | None
     rating_changes: list[RatingChange]
+    deleted_at: datetime | None
     created_at: datetime
     updated_at: datetime
 

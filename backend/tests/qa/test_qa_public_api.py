@@ -175,6 +175,7 @@ MATCH = Obj(
     game_scores=Opt(Games()),
     notes=Opt(Text()),
     rating_changes=Arr(RATING_CHANGE),
+    deleted_at=Exact(None),
     created_at=DateTime(),
     updated_at=DateTime(),
 )
@@ -189,6 +190,7 @@ PLAYER_MATCH = Obj(
     game_scores=Opt(Games()),
     notes=Opt(Text()),
     rating_changes=Arr(RATING_CHANGE),
+    deleted_at=Exact(None),
     created_at=DateTime(),
     updated_at=DateTime(),
     opponent=PLAYER,

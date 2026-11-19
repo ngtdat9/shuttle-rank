@@ -20,6 +20,7 @@ from app.models.admin_user import AdminUser
 from app.models.audit_log import AuditLog
 from app.models.match import Match
 from app.models.player import Player
+from app.models.tournament import Tournament
 from app.services.rating_service import recalculate_all
 from app.services.seed import SeedError, seed_demo
 
@@ -114,6 +115,7 @@ def test_seed_demo_is_reproducible_and_matches_recalculate(
         assert first.disputed == 1
         assert first.canceled == 1
         assert first.achievements == 5
+        assert first.tournaments == 2
         assert first.awards >= 2
         assert first.render().splitlines()[0] == "Seeded demo club"
         names = [name for name, _rating in first.ratings]
@@ -132,6 +134,16 @@ def test_seed_demo_is_reproducible_and_matches_recalculate(
                 select(func.count()).select_from(AuditLog).where(AuditLog.action == "match.create")
             )
             == first.completed + first.disputed + first.canceled
+        )
+
+        tournaments = {t.name: t for t in db_a.scalars(select(Tournament)).all()}
+        assert tournaments["Autumn Open"].status == "completed"
+        assert tournaments["Winter Cup"].status == "in_progress"
+        assert (
+            db_a.scalar(
+                select(func.count()).select_from(Match).where(Match.tournament_id.is_not(None))
+            )
+            == 4
         )
 
         before = {

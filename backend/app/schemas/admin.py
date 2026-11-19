@@ -1,6 +1,6 @@
 """Admin request bodies and responses that are not public schemas."""
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal, Self
 from uuid import UUID
 
@@ -121,3 +121,112 @@ class AuditLogEntry(APISchema):
 
 class MonthlyRebuildResponse(APISchema):
     months_rebuilt: int
+
+
+def _trimmed(value: str, low: int, high: int, label: str) -> str:
+    text = value.strip()
+    if not low <= len(text) <= high:
+        raise ValueError(f"{label} must be between {low} and {high} characters")
+    return text
+
+
+class TournamentCreateRequest(APISchema):
+    name: str
+    description: str | None = Field(default=None, max_length=2000)
+    start_date: date | None = None
+    end_date: date | None = None
+
+    @field_validator("name")
+    @classmethod
+    def trim_name(cls, value: str) -> str:
+        return _trimmed(value, 1, 100, "Name")
+
+
+class TournamentUpdateRequest(APISchema):
+    name: str | None = None
+    description: str | None = Field(default=None, max_length=2000)
+    start_date: date | None = None
+    end_date: date | None = None
+    status: Literal["canceled"] | None = None
+
+    @field_validator("name")
+    @classmethod
+    def trim_name(cls, value: str | None) -> str | None:
+        return None if value is None else _trimmed(value, 1, 100, "Name")
+
+    @model_validator(mode="after")
+    def reject_null_name_or_status(self) -> Self:
+        for name in ("name", "status"):
+            if name in self.model_fields_set and getattr(self, name) is None:
+                raise ValueError(f"{name} cannot be null")
+        return self
+
+
+class ParticipantInput(APISchema):
+    player_id: UUID
+    seed: int | None = Field(default=None, ge=1, le=1024)
+
+
+class ParticipantsAddRequest(APISchema):
+    participants: list[ParticipantInput] = Field(min_length=1, max_length=256)
+
+
+class BracketGenerateRequest(APISchema):
+    seeding: Literal["rating", "manual"] = "rating"
+
+
+class TournamentMatchRequest(APISchema):
+    bracket_match_id: UUID
+    winner_id: UUID
+    match_date: datetime
+    game_scores: list[tuple[int, int]] | None = None
+    notes: str | None = None
+
+
+class AchievementCreateRequest(APISchema):
+    name: str
+    description: str
+    icon: str = Field(default="award", min_length=1, max_length=64)
+    criteria_type: str = Field(default="manual", min_length=1, max_length=64)
+    criteria_value: int | None = None
+
+    @field_validator("name")
+    @classmethod
+    def trim_name(cls, value: str) -> str:
+        return _trimmed(value, 1, 80, "Name")
+
+    @field_validator("description")
+    @classmethod
+    def trim_description(cls, value: str) -> str:
+        return _trimmed(value, 1, 300, "Description")
+
+
+class AchievementUpdateRequest(APISchema):
+    name: str | None = None
+    description: str | None = None
+    icon: str | None = Field(default=None, min_length=1, max_length=64)
+    criteria_type: str | None = Field(default=None, min_length=1, max_length=64)
+    criteria_value: int | None = None
+    is_active: bool | None = None
+
+    @field_validator("name")
+    @classmethod
+    def trim_name(cls, value: str | None) -> str | None:
+        return None if value is None else _trimmed(value, 1, 80, "Name")
+
+    @field_validator("description")
+    @classmethod
+    def trim_description(cls, value: str | None) -> str | None:
+        return None if value is None else _trimmed(value, 1, 300, "Description")
+
+    @model_validator(mode="after")
+    def reject_explicit_nulls(self) -> Self:
+        for name in ("name", "description", "icon", "criteria_type", "is_active"):
+            if name in self.model_fields_set and getattr(self, name) is None:
+                raise ValueError(f"{name} cannot be null")
+        return self
+
+
+class AchievementAwardRequest(APISchema):
+    achievement_id: UUID
+    notes: str | None = Field(default=None, max_length=500)

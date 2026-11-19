@@ -354,6 +354,7 @@ Audit `action` values:
     - `manual` uses the participant seeds; any unseeded players go last, ordered by rating.
   - The bracket size is the next power of 2. Standard seed placement keeps seeds 1 and 2 apart until the final. Byes go to the top seeds and advance them automatically.
   - Sets the status to `in_progress` and returns a `Bracket`.
+  - Participant seeds are rewritten to the final 1..N order. `409` if the tournament is not `draft`/`in_progress` or a result was already recorded; `422` for fewer than 2 participants.
 - **`POST /admin/tournaments/{id}/matches`** with body:
   ```ts
   { bracket_match_id; winner_id; match_date; game_scores?; notes? }
@@ -363,6 +364,8 @@ Audit `action` values:
   - The winner advances to the next round.
   - When the final is recorded, the tournament becomes `completed` and final positions are set: champion 1, runner-up 2, semifinal losers 3, quarterfinal losers 5, and so on.
   - Returns `201` with `{ match: Match; bracket: Bracket }`.
+  - `409` if the tournament is not `in_progress`; `404` if `bracket_match_id` is not in this tournament; `422` if the bracket match is not `ready` or the winner is not one of its players.
+  - Later corrections (`/admin/matches/{id}/correct|cancel`, `DELETE`): canceling, deleting, or setting a tournament match to `disputed` clears the result and the bracket match returns to `ready` (the final reopens a `completed` tournament and clears final positions). Correcting a canceled or disputed tournament match back to `completed` re-attaches it to the open bracket match for the same two players, or returns `422` if there is none.
 
 ### Achievements
 - **`GET /admin/achievements`** returns `{ items: Achievement[] }`, including inactive achievements.
