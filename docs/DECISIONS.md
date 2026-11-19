@@ -155,3 +155,10 @@ The following decisions were made autonomously by the orchestrator during the un
 - Date: 2026-11-19
 - Decision: The app is "Shuttle Rank". The dark design system follows the TENOIS reference, adapted for badminton, using the tokens from the owner's brief.
 - Consequences: None.
+
+## D-019: Next.js data fetching mode
+- Status: accepted
+- Date: 2026-11-19
+- Context: `create-next-app` 16.4 enabled the experimental `cacheComponents` and `partialPrefetching` options. With them on, every uncached fetch must sit inside a Suspense boundary or the build fails.
+- Decision: Turn both options off. Public pages are server components that fetch from the API with `cache: "no-store"`, so ratings are always fresh. Interactive pieces are client components.
+- Consequences: Simpler data flow. The cost is one dynamic render per request, which is negligible at club scale.
