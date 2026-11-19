@@ -1,0 +1,36 @@
+# Render Blueprint for the FastAPI backend.
+# Secrets are declared with sync: false; set their values in the Render dashboard.
+# Never commit real values. See docs/DEPLOYMENT.md.
+services:
+  - type: web
+    name: badminton-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    region: singapore
+    buildCommand: pip install -r requirements.txt
+    # Migrations run on every start (idempotent), then the API serves on $PORT.
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: APP_ENV
+        value: production
+      - key: AUTH_MODE
+        value: supabase
+      - key: SUPABASE_JWT_AUDIENCE
+        value: authenticated
+      - key: DATABASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: ADMIN_BOOTSTRAP_USER_ID
+        sync: false
+      - key: ADMIN_BOOTSTRAP_EMAIL
+        sync: false

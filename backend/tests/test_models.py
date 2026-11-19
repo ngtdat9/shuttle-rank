@@ -32,6 +32,8 @@ def _match(session: Session, player_a: Player, player_b: Player, winner: Player)
 
 
 def test_sqlite_foreign_keys_are_enabled(session: Session) -> None:
+    if session.get_bind().dialect.name != "sqlite":
+        pytest.skip("SQLite-only PRAGMA; PostgreSQL always enforces foreign keys")
     assert session.execute(text("PRAGMA foreign_keys")).scalar() == 1
 
 
@@ -98,7 +100,7 @@ def test_foreign_key_rejects_unknown_player(session: Session) -> None:
             created_by="test-admin",
         )
     )
-    with pytest.raises(IntegrityError, match="FOREIGN KEY"):
+    with pytest.raises(IntegrityError, match="(?i)foreign key"):
         session.commit()
 
 
