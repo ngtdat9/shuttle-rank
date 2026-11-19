@@ -1,6 +1,9 @@
 """Player create, update, and deactivate. Ratings are never written here.
 
-Each public function commits on success and rolls back on failure.
+Public functions commit on success and roll back on failure. ``_create_player``,
+``_update_player``, and ``_deactivate_player`` do the work and flush without
+committing, so another service can include a player write in a larger
+transaction. See the convention at the top of ``match_service``.
 """
 
 import uuid
@@ -33,33 +36,51 @@ def create_player(
     avatar_url: str | None = None,
 ) -> Player:
     """Create a player at the starting rating. Names are unique ignoring case."""
+    with transaction(db):
+        player = _create_player(
+            db,
+            display_name=display_name,
+            actor=actor,
+            avatar_url=avatar_url,
+        )
+    db.refresh(player)
+    return player
+
+
+def _create_player(
+    db: Session,
+    *,
+    display_name: str,
+    actor: str,
+    avatar_url: str | None = None,
+) -> Player:
+    """Insert a player and flush. Does not commit or roll back."""
     actor_id = _require_actor(actor)
     name = _clean_name(display_name)
     avatar = _clean_avatar(avatar_url)
-    with transaction(db):
-        _ensure_name_available(db, name)
-        player = Player(
-            display_name=name,
-            avatar_url=avatar,
-            current_rating=STARTING_RATING,
-            highest_rating=STARTING_RATING,
-            is_active=True,
-        )
-        db.add(player)
-        try:
-            db.flush()
-        except IntegrityError as exc:
-            raise ConflictError("A player with this name already exists") from exc
-        write_audit(
-            db,
-            actor_id=actor_id,
-            action="player.create",
-            entity_type="player",
-            entity_id=player.id,
-            before_data=None,
-            after_data=_snapshot(player),
-        )
-    db.refresh(player)
+    _ensure_name_available(db, name)
+    player = Player(
+        display_name=name,
+        avatar_url=avatar,
+        current_rating=STARTING_RATING,
+        highest_rating=STARTING_RATING,
+        is_active=True,
+    )
+    db.add(player)
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        raise ConflictError("A player with this name already exists") from exc
+    write_audit(
+        db,
+        actor_id=actor_id,
+        action="player.create",
+        entity_type="player",
+        entity_id=player.id,
+        before_data=None,
+        after_data=_snapshot(player),
+    )
+    db.flush()
     return player
 
 
@@ -73,57 +94,86 @@ def update_player(
     is_active: Any = _UNSET,
 ) -> Player:
     """Change name, avatar, or active flag. Omitted arguments are left as they are."""
-    actor_id = _require_actor(actor)
-    if display_name is _UNSET and avatar_url is _UNSET and is_active is _UNSET:
-        raise BusinessRuleError("No player changes were provided")
     with transaction(db):
-        player = _get_player(db, player_id)
-        before = _snapshot(player)
-        if display_name is not _UNSET:
-            name = _clean_name(display_name)
-            _ensure_name_available(db, name, exclude_id=player.id)
-            player.display_name = name
-        if avatar_url is not _UNSET:
-            player.avatar_url = _clean_avatar(avatar_url)
-        if is_active is not _UNSET:
-            if not isinstance(is_active, bool):
-                raise BusinessRuleError("is_active must be true or false")
-            player.is_active = is_active
-        try:
-            db.flush()
-        except IntegrityError as exc:
-            raise ConflictError("A player with this name already exists") from exc
-        write_audit(
+        player = _update_player(
             db,
-            actor_id=actor_id,
-            action="player.update",
-            entity_type="player",
-            entity_id=player.id,
-            before_data=before,
-            after_data=_snapshot(player),
+            player_id,
+            actor=actor,
+            display_name=display_name,
+            avatar_url=avatar_url,
+            is_active=is_active,
         )
     db.refresh(player)
     return player
 
 
+def _update_player(
+    db: Session,
+    player_id: uuid.UUID,
+    *,
+    actor: str,
+    display_name: Any = _UNSET,
+    avatar_url: Any = _UNSET,
+    is_active: Any = _UNSET,
+) -> Player:
+    """Update a player and flush. Does not commit or roll back."""
+    actor_id = _require_actor(actor)
+    if display_name is _UNSET and avatar_url is _UNSET and is_active is _UNSET:
+        raise BusinessRuleError("No player changes were provided")
+    player = _get_player(db, player_id)
+    before = _snapshot(player)
+    if display_name is not _UNSET:
+        name = _clean_name(display_name)
+        _ensure_name_available(db, name, exclude_id=player.id)
+        player.display_name = name
+    if avatar_url is not _UNSET:
+        player.avatar_url = _clean_avatar(avatar_url)
+    if is_active is not _UNSET:
+        if not isinstance(is_active, bool):
+            raise BusinessRuleError("is_active must be true or false")
+        player.is_active = is_active
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        raise ConflictError("A player with this name already exists") from exc
+    write_audit(
+        db,
+        actor_id=actor_id,
+        action="player.update",
+        entity_type="player",
+        entity_id=player.id,
+        before_data=before,
+        after_data=_snapshot(player),
+    )
+    db.flush()
+    return player
+
+
 def deactivate_player(db: Session, player_id: uuid.UUID, *, actor: str) -> Player:
     """Mark a player inactive. History and ratings stay. The row is not deleted."""
-    actor_id = _require_actor(actor)
     with transaction(db):
-        player = _get_player(db, player_id)
-        before = _snapshot(player)
-        player.is_active = False
-        db.flush()
-        write_audit(
-            db,
-            actor_id=actor_id,
-            action="player.deactivate",
-            entity_type="player",
-            entity_id=player.id,
-            before_data=before,
-            after_data=_snapshot(player),
-        )
+        player = _deactivate_player(db, player_id, actor=actor)
     db.refresh(player)
+    return player
+
+
+def _deactivate_player(db: Session, player_id: uuid.UUID, *, actor: str) -> Player:
+    """Deactivate a player and flush. Does not commit or roll back."""
+    actor_id = _require_actor(actor)
+    player = _get_player(db, player_id)
+    before = _snapshot(player)
+    player.is_active = False
+    db.flush()
+    write_audit(
+        db,
+        actor_id=actor_id,
+        action="player.deactivate",
+        entity_type="player",
+        entity_id=player.id,
+        before_data=before,
+        after_data=_snapshot(player),
+    )
+    db.flush()
     return player
 
 

@@ -26,15 +26,15 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 |---|---|---|---|---|---|---|
 | P2-01 | Player service and match processing: transactional rating updates, rating history, duplicate prevention, chronological replay (backdated, correct, cancel, delete), monthly snapshot rebuild, stats/ranking/head-to-head services | be | P1-01, P1-04 | COMPLETED | Contract business rules; replay equals full recalculation | Branch: 54 passed. On `main` after merging with P3-01: 92 passed, ruff clean. Orchestrator reviewed the replay engine |
 | P2-02 | Public read endpoints (dashboard, rankings, monthly, players, matches, head-to-head, achievements read) | be | P2-01 | COMPLETED | Responses match `docs/API.md` | — |
-| P2-03 | Spec-first QA tests: Elo, matches, replay, rankings, head-to-head | qa | P1-01, P1-04 | IN_PROGRESS | Tests derived from the contract | — |
+| P2-03 | Spec-first QA tests: Elo, matches, replay, rankings, head-to-head | qa | P1-01, P1-04 | BLOCKED | Tests derived from the contract | Agent hit usage limit. WIP committed on `task/P2-03-qa-core`: 37 passed, 6 failed (game_scores edge cases, notes length, monthly/rank ties). See docs/HANDOFF.md |
 
 ## Phase 3: Authentication and admin backend
 
 | ID | Task | Agent | Depends on | Status | Acceptance criteria | Test results |
 |---|---|---|---|---|---|---|
 | P3-01 | Auth: Supabase JWT (HS256 secret or JWKS), `admin_users` allowlist, isolated dev mode, rate limit, admin bootstrap CLI | be | P1-01 | COMPLETED | 401/403/429 behaviour; dev mode refused in production | pytest 64 passed; ruff clean; orchestrator security review OK. Ran in parallel with P2-01 |
-| P3-02 | Admin player and match endpoints with audit logs; admin stats and audit-log endpoints | be | P3-01 | IN_PROGRESS | Writes audited; manual rating edits impossible | — |
-| P3-03 | Dev seed script (`python -m app.cli seed-demo`), refused in production | be | P3-02 | IN_PROGRESS | Seeds through services, not raw ratings | — (combined with P3-02) |
+| P3-02 | Admin player and match endpoints with audit logs; admin stats and audit-log endpoints | be | P3-01 | COMPLETED | Writes audited; manual rating edits impossible | 106 passed on `main` after merge; ruff clean; seeded temp server: rankings 200, admin stats 200 with token, 401 without |
+| P3-03 | Dev seed script (`python -m app.cli seed-demo`), refused in production | be | P3-02 | COMPLETED | Seeds through services, not raw ratings | `seed-demo` is reproducible, refuses in production; covered by tests |
 
 ## Phase 4: Public frontend
 
@@ -47,9 +47,9 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 
 | ID | Task | Agent | Depends on | Status | Acceptance criteria | Test results |
 |---|---|---|---|---|---|---|
-| P5-01 | Tournament service: participants, bracket generation (byes, seeding), progression through the match service; achievements service and endpoints | be | P3-02 | TODO | Byes, odd counts, advancement, final positions; no duplicate awards | — |
-| P5-02 | Tournament list and detail with bracket; achievements on profile and dashboard | fe | P4-02, P5-01 contract | IN_PROGRESS | Bracket readable on desktop and mobile | — |
-| P5-03 | Admin UI: login (Supabase and dev), route guard, admin dashboard, players, matches (record, correct, cancel, delete with confirmations), tournaments, achievements, audit log | fe | P4-01, P3-02 | IN_PROGRESS | Admin-only; confirmations on rating-affecting actions | — |
+| P5-01 | Tournament service: participants, bracket generation (byes, seeding), progression through the match service; achievements service and endpoints | be | P3-02 | IN_PROGRESS | Byes, odd counts, advancement, final positions; no duplicate awards | — |
+| P5-02 | Tournament list and detail with bracket; achievements on profile and dashboard | fe | P4-02, P5-01 contract | REVIEW | Bracket readable on desktop and mobile | lint, tsc, build pass; error states verified with the API down; bracket samples for 5 and 8 players reviewed. Merged. Live check pending tournament backend (P5-01) |
+| P5-03 | Admin UI: login (Supabase and dev), route guard, admin dashboard, players, matches (record, correct, cancel, delete with confirmations), tournaments, achievements, audit log | fe | P4-01, P3-02 | REVIEW | Admin-only; confirmations on rating-affecting actions | lint, tsc, build pass; login and route guard checked in the browser. Orchestrator fixed dynamic `process.env[name]` reads that broke Supabase mode in the browser; verified the values are inlined in the bundle. Merged. Live admin flows pending P3-02 |
 
 ## Phase 6: Integration and quality
 
@@ -58,6 +58,18 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 | P6-01 | Backend QA: every endpoint, authorization matrix, persistence, tournaments | qa | P5-01 | TODO | `BUILD_PLAN.md` section 11 plus the brief's section 9 | — |
 | P6-02 | Frontend QA: navigation, integration against the seeded backend, states, responsive layouts, admin protection, production build | qa | P5-02, P5-03 | TODO | All pages work against the real API | — |
 | P6-03 | Fix defects found in QA | be/fe | P6-01, P6-02 | TODO | QA re-verification passes | — |
+
+### Defects found by orchestrator integration check (2026-11-19, live API + seeded temp DB)
+
+| ID | Defect | Severity | Fix task | Status |
+|---|---|---|---|---|
+| BUG-01 | Dashboard multi-player `RatingChart` draws no lines (legend only); single-series profile chart works | High | P6-03 | TODO |
+| BUG-02 | Hydration mismatch warnings in dev on dashboard (`components/club/dashboard-view.tsx` around line 165, date/locale formatting) and player profile (5 issues) | Medium | P6-03 | TODO |
+| BUG-03 | Desktop header nav wraps to two rows at 1024px width | Low | P6-03 | TODO |
+| BUG-04 | Dashboard leader card shows the player name twice (heading and avatar label) | Low | P6-03 | TODO |
+| BUG-05 | Rating chart curve overshoots below and above real values (spline); use monotone or linear | Low | P6-03 | TODO |
+
+Verified working: dashboard data, leaderboard (form ordering, shared ranks, deltas), player profile, head-to-head totals, all public routes return 200 against the live API, and zero-sum ratings (8 players sum to 12000).
 
 ## Phase 7: Deployment preparation
 
@@ -69,6 +81,15 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 ---
 
 ## Log
+
+| Date | Task | Change |
+|---|---|---|
+| 2026-11-19 | P3-02 | Merged admin API/seed. |
+| 2026-11-19 | P2-03 | QA agent usage-limited; WIP tests on `task/P2-03-qa-core`. |
+| 2026-11-19 | P6-03a | Frontend fix agent usage-limited; no code written. Restart from HANDOFF. |
+| 2026-11-19 | — | Cursor usage exhausted; handoff written to `docs/HANDOFF.md` for Claude Code. |
+
+## Log (earlier)
 
 | Date | Task | Change |
 |---|---|---|

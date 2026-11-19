@@ -1,11 +1,18 @@
-"""Read-only achievement queries. Awarding stays in a later task."""
+"""Achievement queries and a minimal award helper.
+
+The admin achievement routes arrive in a later task. ``award_achievement``
+commits. ``_award_achievement`` flushes only, so a caller can award inside a
+larger transaction.
+"""
 
 import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.errors import NotFoundError
+from app.core.errors import BusinessRuleError, ConflictError, NotFoundError
 from app.models.achievement import Achievement as AchievementRow
 from app.models.achievement import PlayerAchievement as PlayerAchievementRow
 from app.models.player import Player
@@ -16,8 +23,10 @@ from app.schemas.achievements import (
     PlayerAchievement,
     PlayerAchievementListResponse,
 )
+from app.services.audit import write_audit
 from app.services.ordering import ensure_utc
 from app.services.serialize import load_players, player_summary
+from app.services.transactions import transaction
 
 
 def list_achievements(db: Session, *, include_inactive: bool = False) -> AchievementListResponse:
@@ -76,6 +85,94 @@ def recent_awards(db: Session, *, limit: int = 5) -> list[AchievementAward]:
         )
         for award in awards
     ]
+
+
+def award_achievement(
+    db: Session,
+    *,
+    player_id: uuid.UUID,
+    achievement_id: uuid.UUID,
+    actor: str,
+    notes: str | None = None,
+    awarded_at: datetime | None = None,
+) -> PlayerAchievementRow:
+    """Award an achievement, write ``achievement.award``, and commit."""
+    with transaction(db):
+        row = _award_achievement(
+            db,
+            player_id=player_id,
+            achievement_id=achievement_id,
+            actor=actor,
+            notes=notes,
+            awarded_at=awarded_at,
+        )
+    db.refresh(row)
+    return row
+
+
+def _award_achievement(
+    db: Session,
+    *,
+    player_id: uuid.UUID,
+    achievement_id: uuid.UUID,
+    actor: str,
+    notes: str | None = None,
+    awarded_at: datetime | None = None,
+) -> PlayerAchievementRow:
+    """Insert one award and flush. Does not commit or roll back."""
+    actor_id = _require_actor(actor)
+    if notes is not None and not isinstance(notes, str):
+        raise BusinessRuleError("Notes must be a string")
+    if db.get(Player, player_id) is None:
+        raise NotFoundError("Player not found")
+    achievement = db.get(AchievementRow, achievement_id)
+    if achievement is None:
+        raise NotFoundError("Achievement not found")
+    if not achievement.is_active:
+        raise BusinessRuleError("Inactive achievements cannot be awarded")
+    existing = db.scalar(
+        select(PlayerAchievementRow.id).where(
+            PlayerAchievementRow.player_id == player_id,
+            PlayerAchievementRow.achievement_id == achievement_id,
+        )
+    )
+    if existing is not None:
+        raise ConflictError("Player already has this achievement")
+    when = datetime.now(UTC) if awarded_at is None else ensure_utc(awarded_at)
+    row = PlayerAchievementRow(
+        player_id=player_id,
+        achievement_id=achievement_id,
+        awarded_at=when,
+        awarded_by=actor_id,
+        notes=notes,
+    )
+    db.add(row)
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        raise ConflictError("Player already has this achievement") from exc
+    write_audit(
+        db,
+        actor_id=actor_id,
+        action="achievement.award",
+        entity_type="player_achievement",
+        entity_id=row.id,
+        before_data=None,
+        after_data={
+            "player_id": player_id,
+            "achievement_id": achievement_id,
+            "awarded_at": when,
+            "notes": notes,
+        },
+    )
+    db.flush()
+    return row
+
+
+def _require_actor(actor: str) -> str:
+    if not isinstance(actor, str) or not actor.strip():
+        raise BusinessRuleError("Actor is required")
+    return actor.strip()
 
 
 def _achievement(row: AchievementRow, awarded_count: int) -> Achievement:

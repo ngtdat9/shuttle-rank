@@ -5,9 +5,10 @@ Run from the ``backend`` directory, after ``alembic upgrade head``:
     python -m app.cli create-admin --auth-user-id <uuid> --email <email> [--display-name NAME]
     python -m app.cli list-admins
     python -m app.cli deactivate-admin --auth-user-id <uuid>
+    python -m app.cli seed-demo [--reset]
 
 Add a later subcommand by registering another parser in ``build_parser`` and
-pointing it at a handler. ``seed-demo`` can follow that pattern.
+pointing it at a handler.
 """
 
 import argparse
@@ -24,6 +25,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db.session import SessionLocal, make_engine
 from app.models.admin_user import AdminUser
+from app.services.seed import seed_demo
 
 logger = logging.getLogger(__name__)
 
@@ -211,6 +213,13 @@ def _cmd_deactivate_admin(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_seed_demo(args: argparse.Namespace) -> int:
+    with _session_scope() as session:
+        summary = seed_demo(session, reset=args.reset)
+    print(summary.render())
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Subcommand parser. New commands are another ``add_parser`` block."""
     parser = argparse.ArgumentParser(prog="python -m app.cli")
@@ -228,6 +237,14 @@ def build_parser() -> argparse.ArgumentParser:
     deactivate = subparsers.add_parser("deactivate-admin", help="Mark an admin inactive")
     deactivate.add_argument("--auth-user-id", required=True)
     deactivate.set_defaults(handler=_cmd_deactivate_admin)
+
+    seed = subparsers.add_parser("seed-demo", help="Load a reproducible demo club")
+    seed.add_argument(
+        "--reset",
+        action="store_true",
+        help="Delete existing app data first (refused in production)",
+    )
+    seed.set_defaults(handler=_cmd_seed_demo)
 
     return parser
 

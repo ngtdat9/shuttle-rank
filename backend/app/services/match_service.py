@@ -1,8 +1,35 @@
 """Match writes and public match reads.
 
-Mutating functions commit on success and roll back on any exception. Rating
-changes and the monthly snapshot rebuild share that transaction. See
-``app.services.transactions``.
+Transaction convention
+----------------------
+Public mutators commit on success and roll back on any exception. Each one
+is a thin wrapper around an inner function that does the work and flushes
+but does not commit or roll back:
+
+- ``create_match`` calls ``_create_match``
+- ``correct_match`` calls ``_correct_match``
+- ``cancel_match`` calls ``_cancel_match``
+- ``delete_match`` calls ``_delete_match``
+- ``update_match_metadata`` calls ``_update_match_metadata``
+
+Call an inner function when several writes must share one transaction. A
+tournament result is the case this exists for: create or correct a rated
+match, update the bracket slots, and write the tournament audit row, then
+commit once. Do not call the public wrapper from inside that transaction.
+It would commit early and leave the bracket update on its own.
+
+``_correct_match``, ``_cancel_match``, and ``_delete_match`` call
+``tournament_service.on_match_changed(db, match, before, change=...)`` after
+the match row is updated and flushed, and before rating replay. ``before``
+is the pre-change snapshot. ``change`` is ``correct``, ``cancel``, or
+``delete``. The hook ignores matches with no ``tournament_id``. Until
+bracket updates are implemented, a tournament match raises
+``BusinessRuleError`` and the caller's transaction rolls the match change
+back.
+
+Player writes use the same split in ``player_service``: ``_create_player``,
+``_update_player``, and ``_deactivate_player``. Read functions do not
+commit. See also ``app.services.transactions``.
 """
 
 import uuid
@@ -52,42 +79,76 @@ def create_match(
     tournament_id: uuid.UUID | None = None,
 ) -> Match:
     """Insert a match and, when it is rated, update Elo. Commits."""
+    with transaction(db):
+        match = _create_match(
+            db,
+            player_a_id=player_a_id,
+            player_b_id=player_b_id,
+            winner_id=winner_id,
+            match_date=match_date,
+            status=status,
+            game_scores=game_scores,
+            notes=notes,
+            created_by=created_by,
+            tournament_id=tournament_id,
+        )
+    db.refresh(match)
+    return match
+
+
+def _create_match(
+    db: Session,
+    *,
+    player_a_id: uuid.UUID,
+    player_b_id: uuid.UUID,
+    winner_id: uuid.UUID,
+    match_date: datetime,
+    status: str = "completed",
+    game_scores: list[list[int]] | None = None,
+    notes: str | None = None,
+    created_by: str,
+    tournament_id: uuid.UUID | None = None,
+) -> Match:
+    """Insert a match and flush. Does not commit or roll back.
+
+    A rated match updates Elo and monthly snapshots in this same session.
+    The caller commits, or rolls back when this function raises.
+    """
     actor = _require_actor(created_by)
     checked_status = _validate_status(status)
     _validate_participants(player_a_id, player_b_id, winner_id)
     played_at = _validate_match_date(match_date)
     scores = _validate_game_scores(game_scores)
     _validate_notes(notes)
-    with transaction(db):
-        _ensure_players(db, [player_a_id, player_b_id], require_active=True)
-        if tournament_id is not None and db.get(Tournament, tournament_id) is None:
-            raise BusinessRuleError("Unknown tournament")
-        match = Match(
-            player_a_id=player_a_id,
-            player_b_id=player_b_id,
-            winner_id=winner_id,
-            match_date=played_at,
-            status=checked_status,
-            tournament_id=tournament_id,
-            game_scores=scores,
-            notes=notes,
-            created_by=actor,
-        )
-        db.add(match)
-        db.flush()
-        if is_rated(match):
-            rate_new_match(db, match)
-            rebuild_monthly_snapshots(db)
-        write_audit(
-            db,
-            actor_id=actor,
-            action="match.create",
-            entity_type="match",
-            entity_id=match.id,
-            before_data=None,
-            after_data=_snapshot(match),
-        )
-    db.refresh(match)
+    _ensure_players(db, [player_a_id, player_b_id], require_active=True)
+    if tournament_id is not None and db.get(Tournament, tournament_id) is None:
+        raise BusinessRuleError("Unknown tournament")
+    match = Match(
+        player_a_id=player_a_id,
+        player_b_id=player_b_id,
+        winner_id=winner_id,
+        match_date=played_at,
+        status=checked_status,
+        tournament_id=tournament_id,
+        game_scores=scores,
+        notes=notes,
+        created_by=actor,
+    )
+    db.add(match)
+    db.flush()
+    if is_rated(match):
+        rate_new_match(db, match)
+        rebuild_monthly_snapshots(db)
+    write_audit(
+        db,
+        actor_id=actor,
+        action="match.create",
+        entity_type="match",
+        entity_id=match.id,
+        before_data=None,
+        after_data=_snapshot(match),
+    )
+    db.flush()
     return match
 
 
@@ -105,102 +166,147 @@ def correct_match(
 ) -> Match:
     """Apply a correction and replay from the earlier of the old and new positions.
 
-    Changing either participant of a tournament match is rejected. Bracket
-    advancement itself is owned by the later tournament write task.
+    Commits on success. Tournament matches go through ``on_match_changed``
+    before replay so the bracket can move with the result.
     """
-    actor_id = _require_actor(actor)
-    reason_text = _require_reason(reason)
     with transaction(db):
-        match = _get_match(db, match_id)
-        before = _snapshot(match)
-        old_key = match_sort_key(match)
-        old_players = {match.player_a_id, match.player_b_id}
-        _apply_correction(
+        match = _correct_match(
             db,
-            match,
+            match_id,
+            reason=reason,
+            actor=actor,
             player_a_id=player_a_id,
             player_b_id=player_b_id,
             winner_id=winner_id,
             match_date=match_date,
             status=status,
         )
-        db.flush()
-        new_key = match_sort_key(match)
-        replay_from(
-            db,
-            old_key if old_key <= new_key else new_key,
-            extra_player_ids=old_players | {match.player_a_id, match.player_b_id},
-        )
-        rebuild_monthly_snapshots(db)
-        after = _snapshot(match)
-        after["reason"] = reason_text
-        write_audit(
-            db,
-            actor_id=actor_id,
-            action="match.correct",
-            entity_type="match",
-            entity_id=match.id,
-            before_data=before,
-            after_data=after,
-        )
     db.refresh(match)
+    return match
+
+
+def _correct_match(
+    db: Session,
+    match_id: uuid.UUID,
+    *,
+    reason: str,
+    actor: str,
+    player_a_id: Any = _UNSET,
+    player_b_id: Any = _UNSET,
+    winner_id: Any = _UNSET,
+    match_date: Any = _UNSET,
+    status: Any = _UNSET,
+) -> Match:
+    """Correct a match and flush. Does not commit or roll back."""
+    actor_id = _require_actor(actor)
+    reason_text = _require_reason(reason)
+    match = _get_match(db, match_id)
+    before = _snapshot(match)
+    old_key = match_sort_key(match)
+    old_players = {match.player_a_id, match.player_b_id}
+    _apply_correction(
+        db,
+        match,
+        player_a_id=player_a_id,
+        player_b_id=player_b_id,
+        winner_id=winner_id,
+        match_date=match_date,
+        status=status,
+    )
+    db.flush()
+    _notify_match_changed(db, match, before, "correct")
+    new_key = match_sort_key(match)
+    replay_from(
+        db,
+        old_key if old_key <= new_key else new_key,
+        extra_player_ids=old_players | {match.player_a_id, match.player_b_id},
+    )
+    rebuild_monthly_snapshots(db)
+    after = _snapshot(match)
+    after["reason"] = reason_text
+    write_audit(
+        db,
+        actor_id=actor_id,
+        action="match.correct",
+        entity_type="match",
+        entity_id=match.id,
+        before_data=before,
+        after_data=after,
+    )
+    db.flush()
     return match
 
 
 def cancel_match(db: Session, match_id: uuid.UUID, reason: str, actor: str) -> Match:
     """Set status to canceled and replay ratings from this match. Commits."""
+    with transaction(db):
+        match = _cancel_match(db, match_id, reason, actor)
+    db.refresh(match)
+    return match
+
+
+def _cancel_match(db: Session, match_id: uuid.UUID, reason: str, actor: str) -> Match:
+    """Cancel a match and flush. Does not commit or roll back."""
     actor_id = _require_actor(actor)
     reason_text = _require_reason(reason)
-    with transaction(db):
-        match = _get_match(db, match_id)
-        before = _snapshot(match)
-        cutoff = match_sort_key(match)
-        players = {match.player_a_id, match.player_b_id}
-        match.status = "canceled"
-        db.flush()
-        replay_from(db, cutoff, extra_player_ids=players)
-        rebuild_monthly_snapshots(db)
-        after = _snapshot(match)
-        after["reason"] = reason_text
-        write_audit(
-            db,
-            actor_id=actor_id,
-            action="match.cancel",
-            entity_type="match",
-            entity_id=match.id,
-            before_data=before,
-            after_data=after,
-        )
-    db.refresh(match)
+    match = _get_match(db, match_id)
+    before = _snapshot(match)
+    cutoff = match_sort_key(match)
+    players = {match.player_a_id, match.player_b_id}
+    match.status = "canceled"
+    db.flush()
+    _notify_match_changed(db, match, before, "cancel")
+    replay_from(db, cutoff, extra_player_ids=players)
+    rebuild_monthly_snapshots(db)
+    after = _snapshot(match)
+    after["reason"] = reason_text
+    write_audit(
+        db,
+        actor_id=actor_id,
+        action="match.cancel",
+        entity_type="match",
+        entity_id=match.id,
+        before_data=before,
+        after_data=after,
+    )
+    db.flush()
     return match
 
 
 def delete_match(db: Session, match_id: uuid.UUID, reason: str, actor: str) -> Match:
     """Soft-delete a match and replay ratings. The row stays in the database."""
+    with transaction(db):
+        match = _delete_match(db, match_id, reason, actor)
+    db.refresh(match)
+    return match
+
+
+def _delete_match(db: Session, match_id: uuid.UUID, reason: str, actor: str) -> Match:
+    """Soft-delete a match and flush. Does not commit or roll back."""
     actor_id = _require_actor(actor)
     reason_text = _require_reason(reason)
-    with transaction(db):
-        match = _get_match(db, match_id)
-        before = _snapshot(match)
-        cutoff = match_sort_key(match)
-        players = {match.player_a_id, match.player_b_id}
-        match.deleted_at = datetime.now(UTC)
-        db.flush()
-        replay_from(db, cutoff, extra_player_ids=players)
-        rebuild_monthly_snapshots(db)
-        after = _snapshot(match)
-        after["reason"] = reason_text
-        after["deleted"] = True
-        write_audit(
-            db,
-            actor_id=actor_id,
-            action="match.delete",
-            entity_type="match",
-            entity_id=match.id,
-            before_data=before,
-            after_data=after,
-        )
-    db.refresh(match)
+    match = _get_match(db, match_id)
+    before = _snapshot(match)
+    cutoff = match_sort_key(match)
+    players = {match.player_a_id, match.player_b_id}
+    match.deleted_at = datetime.now(UTC)
+    db.flush()
+    _notify_match_changed(db, match, before, "delete")
+    replay_from(db, cutoff, extra_player_ids=players)
+    rebuild_monthly_snapshots(db)
+    after = _snapshot(match)
+    after["reason"] = reason_text
+    after["deleted"] = True
+    write_audit(
+        db,
+        actor_id=actor_id,
+        action="match.delete",
+        entity_type="match",
+        entity_id=match.id,
+        before_data=before,
+        after_data=after,
+    )
+    db.flush()
     return match
 
 
@@ -212,29 +318,49 @@ def update_match_metadata(
     notes: Any = _UNSET,
     game_scores: Any = _UNSET,
 ) -> Match:
-    """Change notes or game scores. Ratings are not replayed."""
+    """Change notes or game scores. Ratings are not replayed. Commits."""
+    with transaction(db):
+        match = _update_match_metadata(
+            db,
+            match_id,
+            actor=actor,
+            notes=notes,
+            game_scores=game_scores,
+        )
+    db.refresh(match)
+    return match
+
+
+def _update_match_metadata(
+    db: Session,
+    match_id: uuid.UUID,
+    *,
+    actor: str,
+    notes: Any = _UNSET,
+    game_scores: Any = _UNSET,
+) -> Match:
+    """Change notes or game scores and flush. Does not commit or roll back."""
     actor_id = _require_actor(actor)
     if notes is _UNSET and game_scores is _UNSET:
         raise BusinessRuleError("No match changes were provided")
-    with transaction(db):
-        match = _get_match(db, match_id)
-        before = _snapshot(match)
-        if notes is not _UNSET:
-            _validate_notes(notes)
-            match.notes = notes
-        if game_scores is not _UNSET:
-            match.game_scores = _validate_game_scores(game_scores)
-        db.flush()
-        write_audit(
-            db,
-            actor_id=actor_id,
-            action="match.update",
-            entity_type="match",
-            entity_id=match.id,
-            before_data=before,
-            after_data=_snapshot(match),
-        )
-    db.refresh(match)
+    match = _get_match(db, match_id)
+    before = _snapshot(match)
+    if notes is not _UNSET:
+        _validate_notes(notes)
+        match.notes = notes
+    if game_scores is not _UNSET:
+        match.game_scores = _validate_game_scores(game_scores)
+    db.flush()
+    write_audit(
+        db,
+        actor_id=actor_id,
+        action="match.update",
+        entity_type="match",
+        entity_id=match.id,
+        before_data=before,
+        after_data=_snapshot(match),
+    )
+    db.flush()
     return match
 
 
@@ -249,6 +375,7 @@ def list_matches(
     date_from: Any = None,
     date_to: Any = None,
     search: str | None = None,
+    include_deleted: bool = False,
 ) -> Paginated[MatchSchema]:
     total, rows = _query_matches(
         db,
@@ -260,6 +387,7 @@ def list_matches(
         date_from=date_from,
         date_to=date_to,
         search=search,
+        include_deleted=include_deleted,
     )
     return Paginated(
         items=matches_to_read_models(db, rows),
@@ -349,6 +477,7 @@ def _query_matches(
     date_from: Any,
     date_to: Any,
     search: str | None,
+    include_deleted: bool = False,
 ) -> tuple[int, list[Match]]:
     if status not in _STATUS_FILTERS:
         raise BusinessRuleError("Invalid match status")
@@ -363,8 +492,9 @@ def _query_matches(
         select(Match)
         .join(player_a, Match.player_a_id == player_a.id)
         .join(player_b, Match.player_b_id == player_b.id)
-        .where(Match.deleted_at.is_(None))
     )
+    if not include_deleted:
+        statement = statement.where(Match.deleted_at.is_(None))
     if status != "all":
         statement = statement.where(Match.status == status)
     if player_id is not None:
@@ -395,6 +525,18 @@ def _query_matches(
     )
     rows = list(db.scalars(statement.offset((page - 1) * page_size).limit(page_size)).all())
     return total, rows
+
+
+def _notify_match_changed(
+    db: Session,
+    match: Match,
+    before: dict[str, Any],
+    change: str,
+) -> None:
+    """Ask the tournament service to update a bracket in this same transaction."""
+    from app.services.tournament_service import on_match_changed
+
+    on_match_changed(db, match, before, change=change)
 
 
 def _apply_correction(db: Session, match: Match, **changes: Any) -> None:
