@@ -17,7 +17,7 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 | P1-00 | Git init, `.gitignore`, path fixes, initial commit | orch | — | COMPLETED | Repo on `main`; `.env*` and `*.db` ignored | Commit `22c6ed0` |
 | P1-01 | Backend foundation: FastAPI, config, SQLAlchemy, all 11 models, Alembic initial migration, health endpoint, error format, pure Elo module and tests | be | P1-00 | COMPLETED | `alembic upgrade head` / `downgrade base` work on empty SQLite; FKs enforced; Elo ±16 at 1500; ruff and pytest pass | pytest 26 passed; ruff clean; alembic up/down OK; health 200. Orchestrator fixed migration boolean defaults for Postgres. Merged `c6b4ff2` |
 | P1-02 | Frontend foundation: Next.js + TS + Tailwind + shadcn/ui + Recharts + lucide, design tokens, app shell and nav, shared components, `/design` showcase | fe | P1-00 | IN_PROGRESS | lint, tsc, and build pass; design tokens match the brief; responsive nav | — |
-| P1-03 | `docs/REQUIREMENTS.md`, `docs/ux/design-system.md`, `docs/ux/pages.md` | ux | P1-00 | IN_PROGRESS | Testable acceptance criteria; per-page layout, fields, and states | — |
+| P1-03 | `docs/REQUIREMENTS.md`, `docs/ux/design-system.md`, `docs/ux/pages.md` | ux | P1-00 | COMPLETED | Testable acceptance criteria; per-page layout, fields, and states | 795 lines; aligned with `docs/API.md`, no contract changes |
 | P1-04 | API contract `docs/API.md` | orch | P1-00 | COMPLETED | Every public and admin endpoint, schema, error, and rule | Reviewed against the brief |
 
 ## Phase 2: Core business logic and public API
