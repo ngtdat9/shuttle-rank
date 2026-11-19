@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import {
   CartesianGrid,
   Line,
@@ -53,7 +53,9 @@ type ChartRow = {
 } & Record<string, string | number | null>;
 
 function seriesColor(series: RatingSeries, index: number): string {
-  return series.color ?? SERIES_COLORS[index % SERIES_COLORS.length] ?? SERIES_COLORS[0];
+  return (
+    series.color ?? SERIES_COLORS[index % SERIES_COLORS.length] ?? SERIES_COLORS[0]
+  );
 }
 
 function seriesDataKey(index: number): string {
@@ -65,10 +67,10 @@ function asNumber(value: unknown): number | null {
   return null;
 }
 
-function displayLabel(label: string): string {
+function displayLabel(label: string, timeZone?: string): string {
   if (label === "Start") return "Start";
   if (/^\d{4}-\d{2}-\d{2}/.test(label)) {
-    return formatDate(label, { month: "short", day: "numeric" }, "en-US");
+    return formatDate(label, { month: "short", day: "numeric", timeZone }, "en-US");
   }
   return label;
 }
@@ -115,14 +117,19 @@ function RatingTooltip({
   label,
   meta,
   series,
+  timeZone,
 }: Pick<TooltipContentProps<number, string>, "active" | "payload" | "label"> & {
+  timeZone?: string;
   meta: Map<string, PointMeta>;
   series: RatingSeries[];
 }) {
   if (!active || payload.length === 0) return null;
 
   const row = payload[0]?.payload as ChartRow | undefined;
-  const dateLabel = displayLabel(row?.label ?? (typeof label === "string" ? label : ""));
+  const dateLabel = displayLabel(
+    row?.label ?? (typeof label === "string" ? label : ""),
+    timeZone,
+  );
 
   return (
     <div className="rounded-xl border border-border bg-elevated px-3 py-2 text-xs">
@@ -133,7 +140,8 @@ function RatingTooltip({
           const dataKey = String(entry.dataKey ?? "");
           const detail = meta.get(`${dataKey}\0${row?.key ?? ""}`);
           const name =
-            series.find((_, index) => seriesDataKey(index) === dataKey)?.name ?? entry.name;
+            series.find((_, index) => seriesDataKey(index) === dataKey)?.name ??
+            entry.name;
           return (
             <li key={dataKey} className="flex flex-col gap-0.5">
               <span className="flex items-center gap-2">
@@ -148,8 +156,12 @@ function RatingTooltip({
               </span>
               {detail?.opponent ? (
                 <span className="pl-4 text-muted-foreground">
-                  {detail.result ? `${detail.result} vs ${detail.opponent}` : detail.opponent}
-                  {detail.ratingChange != null ? ` · ${formatDelta(detail.ratingChange)}` : ""}
+                  {detail.result
+                    ? `${detail.result} vs ${detail.opponent}`
+                    : detail.opponent}
+                  {detail.ratingChange != null
+                    ? ` · ${formatDelta(detail.ratingChange)}`
+                    : ""}
                 </span>
               ) : null}
             </li>
@@ -163,6 +175,12 @@ function RatingTooltip({
 export function RatingChart({ series, className, height = 256 }: RatingChartProps) {
   const gradientPrefix = useId().replace(/:/g, "");
   const [hidden, setHidden] = useState<string[]>([]);
+  // UTC on server and first paint; the viewer's zone after mount (no hydration mismatch).
+  const [timeZone, setTimeZone] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  }, []);
   const { rows, meta } = buildChart(series);
   const hasPoints = series.some((item) => item.points.length > 0);
   const visible = series
@@ -172,7 +190,10 @@ export function RatingChart({ series, className, height = 256 }: RatingChartProp
   if (!hasPoints) {
     return (
       <div
-        className={cn("flex items-center justify-center text-sm text-muted-foreground", className)}
+        className={cn(
+          "flex items-center justify-center text-sm text-muted-foreground",
+          className,
+        )}
         style={{ height }}
       >
         No rating history yet
@@ -180,7 +201,9 @@ export function RatingChart({ series, className, height = 256 }: RatingChartProp
     );
   }
 
-  const ratings = visible.flatMap(({ item }) => item.points.map((point) => point.rating));
+  const ratings = visible.flatMap(({ item }) =>
+    item.points.map((point) => point.rating),
+  );
   const min = ratings.length > 0 ? Math.min(...ratings) : 1500;
   const max = ratings.length > 0 ? Math.max(...ratings) : 1500;
   const pad = Math.max(8, Math.round((max - min) * 0.18) || 8);
@@ -188,7 +211,9 @@ export function RatingChart({ series, className, height = 256 }: RatingChartProp
 
   function toggle(name: string) {
     setHidden((current) =>
-      current.includes(name) ? current.filter((item) => item !== name) : [...current, name],
+      current.includes(name)
+        ? current.filter((item) => item !== name)
+        : [...current, name],
     );
   }
 
@@ -221,7 +246,9 @@ export function RatingChart({ series, className, height = 256 }: RatingChartProp
         </ul>
       ) : null}
       {visible.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Turn a player back on in the legend.</p>
+        <p className="text-sm text-muted-foreground">
+          Turn a player back on in the legend.
+        </p>
       ) : (
         <div style={{ height }} className="w-full">
           <ResponsiveContainer width="100%" height="100%">
@@ -234,7 +261,7 @@ export function RatingChart({ series, className, height = 256 }: RatingChartProp
                 tick={{ fill: "#A1AAA3", fontSize: 12 }}
                 tickFormatter={(value: string) => {
                   const row = rows.find((entry) => entry.key === value);
-                  return displayLabel(row?.label ?? value);
+                  return displayLabel(row?.label ?? value, timeZone);
                 }}
                 minTickGap={24}
               />
@@ -254,6 +281,7 @@ export function RatingChart({ series, className, height = 256 }: RatingChartProp
                     label={props.label}
                     meta={meta}
                     series={series}
+                    timeZone={timeZone}
                   />
                 )}
                 cursor={{ stroke: "#2C312E", strokeWidth: 1 }}

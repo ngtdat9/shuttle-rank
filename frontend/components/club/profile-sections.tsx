@@ -3,10 +3,14 @@ import Link from "next/link";
 import { AchievementIcon } from "@/components/achievement-icon";
 import { RatingChart, type RatingPoint } from "@/components/charts/rating-chart";
 import { PlayerAvatar } from "@/components/player-avatar";
-import { cardClass, heroCardClass, QuietEmpty, textActionClass } from "@/components/club/styles";
+import {
+  cardClass,
+  heroCardClass,
+  QuietEmpty,
+  textActionClass,
+} from "@/components/club/styles";
 import { FormGuide } from "@/components/form-guide";
 import { InactiveBadge } from "@/components/inactive-badge";
-import { LoadError } from "@/components/load-error";
 import { LocalDateTime } from "@/components/local-time";
 import { Pager } from "@/components/pager";
 import { RankBadge } from "@/components/rank-badge";
@@ -36,7 +40,8 @@ import {
 } from "@/lib/format";
 import { errorCopy, loadData } from "@/lib/load";
 import { readPage, type Query } from "@/lib/query";
-import type { FormResult } from "@/types/api";
+import type { ApiError } from "@/lib/api/client";
+import type { FormResult, PlayerProfile } from "@/types/api";
 
 const PAGE_SIZE = 20;
 
@@ -51,28 +56,55 @@ function streakLabel(type: FormResult, count: number): string {
   return count === 1 ? "1 loss" : `${count} losses`;
 }
 
-export async function ProfileHeader({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const result = await loadData(getPlayer(id), { notFoundOn404: true });
-  if (!result.ok) {
-    const copy = errorCopy(result.error, "this player");
-    return <LoadError title={copy.title} message={copy.message} />;
-  }
+/** Compact inline error for a secondary section when the profile itself loaded. */
+function SectionError({
+  heading,
+  error,
+  thing,
+}: {
+  heading: string;
+  error: ApiError;
+  thing: string;
+}) {
+  const copy = errorCopy(error, thing);
+  return (
+    <section className={cardClass}>
+      <h2 className="text-lg font-semibold">{heading}</h2>
+      <p role="alert" className="mt-2 text-sm text-negative">
+        {copy.title} Refresh to try again.
+      </p>
+    </section>
+  );
+}
 
-  const player = result.data;
+/** Primary request for the profile page. Failure is handled once, at page level. */
+export async function loadProfile(params: Promise<{ id: string }>) {
+  const { id } = await params;
+  return loadData(getPlayer(id), { notFoundOn404: true });
+}
+
+export function ProfileHeader({ player }: { player: PlayerProfile }) {
   const stats = player.stats;
 
   return (
     <section className={heroCardClass}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
-          <PlayerAvatar name={player.display_name} imageUrl={player.avatar_url} size="lg" />
+          <PlayerAvatar
+            name={player.display_name}
+            imageUrl={player.avatar_url}
+            size="lg"
+          />
           <div className="min-w-0">
             <h1 className="truncate text-[28px] leading-[34px] font-semibold">
               {player.display_name}
             </h1>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              {player.rank == null ? <InactiveBadge /> : <RankBadge rank={player.rank} />}
+              {player.rank == null ? (
+                <InactiveBadge />
+              ) : (
+                <RankBadge rank={player.rank} />
+              )}
             </div>
           </div>
         </div>
@@ -101,7 +133,9 @@ export async function ProfileHeader({ params }: { params: Promise<{ id: string }
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">Win rate</dt>
-          <dd className="text-lg font-semibold tabular-nums">{formatWinRate(stats.win_rate)}</dd>
+          <dd className="text-lg font-semibold tabular-nums">
+            {formatWinRate(stats.win_rate)}
+          </dd>
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">Streak</dt>
@@ -137,8 +171,13 @@ export async function ProfileChart({ params }: { params: Promise<{ id: string }>
   const { id } = await params;
   const result = await loadData(getPlayerRatingHistory(id));
   if (!result.ok) {
-    const copy = errorCopy(result.error, "rating history");
-    return <LoadError title={copy.title} message={copy.message} />;
+    return (
+      <SectionError
+        heading="Elo rating progression"
+        error={result.error}
+        thing="rating history"
+      />
+    );
   }
 
   const history = result.data;
@@ -181,12 +220,17 @@ export async function ProfileChart({ params }: { params: Promise<{ id: string }>
   );
 }
 
-export async function ProfileAchievements({ params }: { params: Promise<{ id: string }> }) {
+export async function ProfileAchievements({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await params;
   const result = await loadData(getPlayerAchievements(id));
   if (!result.ok) {
-    const copy = errorCopy(result.error, "achievements");
-    return <LoadError title={copy.title} message={copy.message} />;
+    return (
+      <SectionError heading="Achievements" error={result.error} thing="achievements" />
+    );
   }
 
   return (
@@ -202,12 +246,16 @@ export async function ProfileAchievements({ params }: { params: Promise<{ id: st
                 <AchievementIcon name={award.achievement.icon} />
               </span>
               <span className="min-w-0">
-                <span className="block text-sm font-medium">{award.achievement.name}</span>
+                <span className="block text-sm font-medium">
+                  {award.achievement.name}
+                </span>
                 <span className="block text-xs text-muted-foreground">
                   <LocalDateTime value={award.awarded_at} withTime={false} />
                 </span>
                 {award.notes ? (
-                  <span className="mt-1 block text-sm text-muted-foreground">{award.notes}</span>
+                  <span className="mt-1 block text-sm text-muted-foreground">
+                    {award.notes}
+                  </span>
                 ) : null}
               </span>
             </li>
@@ -232,8 +280,7 @@ export async function ProfileMatches({
     getPlayerMatches(id, { page, page_size: PAGE_SIZE, status: "completed" }),
   );
   if (!result.ok) {
-    const copy = errorCopy(result.error, "matches");
-    return <LoadError title={copy.title} message={copy.message} />;
+    return <SectionError heading="Matches" error={result.error} thing="matches" />;
   }
 
   const data = result.data;
@@ -264,11 +311,16 @@ export async function ProfileMatches({
                     <LocalDateTime value={match.match_date} />
                   </TableCell>
                   <TableCell>
-                    <Link href={`/players/${match.opponent.id}`} className={textActionClass}>
+                    <Link
+                      href={`/players/${match.opponent.id}`}
+                      className={textActionClass}
+                    >
                       {match.opponent.display_name}
                     </Link>
                   </TableCell>
-                  <TableCell className={match.result === "W" ? "text-positive" : "text-negative"}>
+                  <TableCell
+                    className={match.result === "W" ? "text-positive" : "text-negative"}
+                  >
                     {match.result}
                   </TableCell>
                   <TableCell className="text-right">
@@ -310,8 +362,9 @@ export async function ProfileMonthly({ params }: { params: Promise<{ id: string 
   const { id } = await params;
   const result = await loadData(getPlayerMonthly(id));
   if (!result.ok) {
-    const copy = errorCopy(result.error, "monthly record");
-    return <LoadError title={copy.title} message={copy.message} />;
+    return (
+      <SectionError heading="By month" error={result.error} thing="monthly record" />
+    );
   }
 
   const items = result.data.items;
@@ -351,7 +404,9 @@ export async function ProfileMonthly({ params }: { params: Promise<{ id: string 
                 {items.map((item) => (
                   <TableRow key={`${item.year}-${item.month}`}>
                     <TableCell>{formatMonthLabel(item.year, item.month)}</TableCell>
-                    <TableCell className="tabular-nums">{formatRank(item.rank)}</TableCell>
+                    <TableCell className="tabular-nums">
+                      {formatRank(item.rank)}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatRating(item.rating)}
                     </TableCell>
