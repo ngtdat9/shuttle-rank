@@ -27,7 +27,7 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 | P2-01 | Player service and match processing: transactional rating updates, rating history, duplicate prevention, chronological replay (backdated, correct, cancel, delete), monthly snapshot rebuild, stats/ranking/head-to-head services | be | P1-01, P1-04 | COMPLETED | Contract business rules; replay equals full recalculation | Branch: 54 passed. On `main` after merging with P3-01: 92 passed, ruff clean. Orchestrator reviewed the replay engine |
 | P2-02 | Public read endpoints (dashboard, rankings, monthly, players, matches, head-to-head, achievements read) | be | P2-01 | COMPLETED | Responses match `docs/API.md` | — |
 | P2-03 | Spec-first QA tests: Elo, matches, replay, rankings, head-to-head | qa | P1-01, P1-04 | DONE | Tests derived from the contract | Merged. 43 QA tests in `backend/tests/qa/`; 3 product defects found (BUG-06..08), tracked as strict xfails, fixed in P2-04 |
-| P2-04 | Fix QA defects BUG-06..08 (score 0–99, notes ≤500, rating-only rank ties) and remove xfails | be | P2-03, P5-01 | IN_PROGRESS | xfails removed and passing | — |
+| P2-04 | Fix QA defects BUG-06..08 (score 0–99, notes ≤500, rating-only rank ties) and remove xfails | be | P2-03, P5-01 | DONE | xfails removed and passing | Merged. QA xfails removed and passing (220 passed) |
 
 ## Phase 3: Authentication and admin backend
 
@@ -69,9 +69,9 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 | BUG-03 | Desktop header nav wraps to two rows at 1024px width | Low | P6-03 | DONE (P6-03a) |
 | BUG-04 | Dashboard leader card shows the player name twice (heading and avatar label) | Low | P6-03 | DONE (P6-03a) |
 | BUG-05 | Rating chart curve overshoots below and above real values (spline); use monotone or linear | Low | P6-03 | DONE (already monotone; no change) |
-| BUG-06 | `game_scores` sides above 99 accepted (R-MA-02); `match_service._validate_game_scores` | Medium | P2-04 | TODO |
-| BUG-07 | Notes over 500 chars accepted (R-MA-02); `match_service._validate_notes` (check PATCH too) | Medium | P2-04 | TODO |
-| BUG-08 | Rank ties keyed on (rating, wins) instead of rating only (R-LB-02, OQ-10); `ranking_service.compute_standings`, `monthly_service._assign_ranks` | Medium | P2-04 | TODO |
+| BUG-06 | `game_scores` sides above 99 accepted (R-MA-02); `match_service._validate_game_scores` | Medium | P2-04 | DONE (P2-04) |
+| BUG-07 | Notes over 500 chars accepted (R-MA-02); `match_service._validate_notes` (check PATCH too) | Medium | P2-04 | DONE (P2-04) |
+| BUG-08 | Rank ties keyed on (rating, wins) instead of rating only (R-LB-02, OQ-10); `ranking_service.compute_standings`, `monthly_service._assign_ranks` | Medium | P2-04 | DONE (P2-04) |
 | BUG-09 | Rating chart x-axis labels use UTC month/day; can be off by one day vs local near midnight | Low | P6-03 | TODO |
 
 Verified working: dashboard data, leaderboard (form ordering, shared ranks, deltas), player profile, head-to-head totals, all public routes return 200 against the live API, and zero-sum ratings (8 players sum to 12000).

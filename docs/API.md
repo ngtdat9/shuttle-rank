@@ -317,6 +317,7 @@ Audit `action` values:
     status?: "completed" | "disputed";  // default completed
     game_scores?: [number, number][] | null; notes?: string | null }
   ```
+  - `game_scores`: at most five games, each side an integer 0–99. `notes`: at most 500 characters. Both apply to `PATCH` and tournament results too.
   - Returns `201` with a `Match`.
   - Returns `422` if a player plays themselves, the winner isn't one of the two players, a player is inactive, or a player is unknown (unknown players return `422`, not `404`).
   - A backdated match triggers replay.
