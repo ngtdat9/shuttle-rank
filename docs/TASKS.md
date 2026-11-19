@@ -33,8 +33,8 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 | ID | Task | Agent | Depends on | Status | Acceptance criteria | Test results |
 |---|---|---|---|---|---|---|
 | P3-01 | Auth: Supabase JWT (HS256 secret or JWKS), `admin_users` allowlist, isolated dev mode, rate limit, admin bootstrap CLI | be | P1-01 | COMPLETED | 401/403/429 behaviour; dev mode refused in production | pytest 64 passed; ruff clean; orchestrator security review OK. Ran in parallel with P2-01 |
-| P3-02 | Admin player and match endpoints with audit logs; admin stats and audit-log endpoints | be | P3-01 | IN_PROGRESS | Writes audited; manual rating edits impossible | — |
-| P3-03 | Dev seed script (`python -m app.cli seed-demo`), refused in production | be | P3-02 | IN_PROGRESS | Seeds through services, not raw ratings | — (combined with P3-02) |
+| P3-02 | Admin player and match endpoints with audit logs; admin stats and audit-log endpoints | be | P3-01 | COMPLETED | Writes audited; manual rating edits impossible | 106 passed on `main` after merge; ruff clean; seeded temp server: rankings 200, admin stats 200 with token, 401 without |
+| P3-03 | Dev seed script (`python -m app.cli seed-demo`), refused in production | be | P3-02 | COMPLETED | Seeds through services, not raw ratings | `seed-demo` is reproducible, refuses in production; covered by tests |
 
 ## Phase 4: Public frontend
 
@@ -47,7 +47,7 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 
 | ID | Task | Agent | Depends on | Status | Acceptance criteria | Test results |
 |---|---|---|---|---|---|---|
-| P5-01 | Tournament service: participants, bracket generation (byes, seeding), progression through the match service; achievements service and endpoints | be | P3-02 | TODO | Byes, odd counts, advancement, final positions; no duplicate awards | — |
+| P5-01 | Tournament service: participants, bracket generation (byes, seeding), progression through the match service; achievements service and endpoints | be | P3-02 | IN_PROGRESS | Byes, odd counts, advancement, final positions; no duplicate awards | — |
 | P5-02 | Tournament list and detail with bracket; achievements on profile and dashboard | fe | P4-02, P5-01 contract | REVIEW | Bracket readable on desktop and mobile | lint, tsc, build pass; error states verified with the API down; bracket samples for 5 and 8 players reviewed. Merged. Live check pending tournament backend (P5-01) |
 | P5-03 | Admin UI: login (Supabase and dev), route guard, admin dashboard, players, matches (record, correct, cancel, delete with confirmations), tournaments, achievements, audit log | fe | P4-01, P3-02 | REVIEW | Admin-only; confirmations on rating-affecting actions | lint, tsc, build pass; login and route guard checked in the browser. Orchestrator fixed dynamic `process.env[name]` reads that broke Supabase mode in the browser; verified the values are inlined in the bundle. Merged. Live admin flows pending P3-02 |
 
