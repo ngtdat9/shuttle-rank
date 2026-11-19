@@ -41,16 +41,16 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 
 | ID | Task | Agent | Depends on | Status | Acceptance criteria | Test results |
 |---|---|---|---|---|---|---|
-| P4-01 | Typed API client and contract types | fe | P1-02, P1-04 | REVIEW | Types match `docs/API.md` | — |
-| P4-02 | Dashboard, leaderboard, monthly leaderboard, players directory, player profile, matches list and detail, head-to-head, with real API calls and loading, empty, and error states | fe | P4-01, P1-03 | REVIEW | No mock data; mobile and desktop | lint, tsc, build pass; routes return 200 with an error state when the API is down. Live-data integration check pending P2-01. Merged |
+| P4-01 | Typed API client and contract types | fe | P1-02, P1-04 | DONE | Types match `docs/API.md` | — Verified by P6-02 QA PASS. |
+| P4-02 | Dashboard, leaderboard, monthly leaderboard, players directory, player profile, matches list and detail, head-to-head, with real API calls and loading, empty, and error states | fe | P4-01, P1-03 | DONE | No mock data; mobile and desktop | lint, tsc, build pass; routes return 200 with an error state when the API is down. Live-data integration check pending P2-01. Merged Verified by P6-02 QA PASS. |
 
 ## Phase 5: Tournaments, monthly rankings, achievements, admin UI
 
 | ID | Task | Agent | Depends on | Status | Acceptance criteria | Test results |
 |---|---|---|---|---|---|---|
 | P5-01 | Tournament service: participants, bracket generation (byes, seeding), progression through the match service; achievements service and endpoints | be | P3-02 | DONE | Byes, odd counts, advancement, final positions; no duplicate awards | Merged. 13 admin routes, bracket sync on match changes (D-022), seed tournaments, `deleted_at` on Match. QA PASS (215 passed) |
-| P5-02 | Tournament list and detail with bracket; achievements on profile and dashboard | fe | P4-02, P5-01 contract | REVIEW | Bracket readable on desktop and mobile | lint, tsc, build pass; error states verified with the API down; bracket samples for 5 and 8 players reviewed. Merged. Live check pending tournament backend (P5-01) |
-| P5-03 | Admin UI: login (Supabase and dev), route guard, admin dashboard, players, matches (record, correct, cancel, delete with confirmations), tournaments, achievements, audit log | fe | P4-01, P3-02 | REVIEW | Admin-only; confirmations on rating-affecting actions | lint, tsc, build pass; login and route guard checked in the browser. Orchestrator fixed dynamic `process.env[name]` reads that broke Supabase mode in the browser; verified the values are inlined in the bundle. Merged. Live admin flows pending P3-02 |
+| P5-02 | Tournament list and detail with bracket; achievements on profile and dashboard | fe | P4-02, P5-01 contract | DONE | Bracket readable on desktop and mobile | lint, tsc, build pass; error states verified with the API down; bracket samples for 5 and 8 players reviewed. Merged. Live check pending tournament backend (P5-01) Verified by P6-02 QA PASS. |
+| P5-03 | Admin UI: login (Supabase and dev), route guard, admin dashboard, players, matches (record, correct, cancel, delete with confirmations), tournaments, achievements, audit log | fe | P4-01, P3-02 | DONE | Admin-only; confirmations on rating-affecting actions | lint, tsc, build pass; login and route guard checked in the browser. Orchestrator fixed dynamic `process.env[name]` reads that broke Supabase mode in the browser; verified the values are inlined in the bundle. Merged. Live admin flows pending P3-02 Verified by P6-02 QA PASS. |
 
 ## Phase 6: Integration and quality
 
