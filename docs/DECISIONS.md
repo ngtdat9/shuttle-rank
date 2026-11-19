@@ -176,3 +176,15 @@ The following decisions were made autonomously by the orchestrator during the un
 - Context: Cursor subagents hit a usage limit mid-build. The owner chose to continue in Claude Code with the same multi-agent workflow.
 - Decision: Specialists live in `.claude/agents/` with `model: sonnet`. The main Claude Code session acts as the orchestrator; its workflow is in the root `CLAUDE.md`. The `.cursor/rules/*.mdc` files became `CLAUDE.md`, `backend/CLAUDE.md` and `frontend/CLAUDE.md`. `.cursor/setup-worktree.sh` moved to `scripts/setup-worktree.sh`. `.cursor/` was removed.
 - Consequences: Escalation to Opus is a per-launch model override. Worktree layout and branch naming are unchanged.
+
+## D-022: Tournament write error codes and bracket-sync rules
+- Status: accepted
+- Date: 2026-11-19
+- Context: The P5-01 contract did not say which errors tournament writes return, or how corrections move a bracket.
+- Decision:
+  - Tournament-state conflicts return `409`: participant changes outside `draft`, generating a bracket in the wrong state or after a result, and recording when the tournament is not `in_progress`.
+  - Rule violations return `422`: fewer than 2 participants, a bracket match that is not `ready`, or a winner who is not in the match. An unknown `bracket_match_id` returns `404`.
+  - `generate-bracket` rewrites seeds to 1..N.
+  - Canceling, deleting, or disputing a tournament match clears its bracket result. The final reopens the tournament. Correcting the match back to `completed` re-attaches it to the open slot for the same two players, or returns `422`.
+  - Awarding an unknown `achievement_id` returns `404`.
+- Consequences: Additive; written in `docs/API.md`. Match creation still returns `422` for unknown players, so the two cases are inconsistent. That is accepted.
