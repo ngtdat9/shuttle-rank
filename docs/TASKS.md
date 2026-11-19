@@ -56,7 +56,7 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 
 | ID | Task | Agent | Depends on | Status | Acceptance criteria | Test results |
 |---|---|---|---|---|---|---|
-| P6-01 | Backend QA: every endpoint, authorization matrix, persistence, tournaments | qa | P5-01 | IN_PROGRESS | `BUILD_PLAN.md` section 11 plus the brief's section 9 | — |
+| P6-01 | Backend QA: every endpoint, authorization matrix, persistence, tournaments | qa | P5-01 | DONE | `BUILD_PLAN.md` section 11 plus the brief's section 9 | Merged. QA PASS: authz matrix on all 24 admin ops (dev, Supabase HS256, JWKS, production), contract vs OpenAPI, no rating-edit fields, migrations up/down/up, restart persistence, seed sanity, error envelope. 176 tests |
 | P6-02 | Frontend QA: navigation, integration against the seeded backend, states, responsive layouts, admin protection, production build | qa | P5-02, P5-03 | IN_PROGRESS | All pages work against the real API | — |
 | P6-03 | Fix defects found in QA | be/fe | P6-01, P6-02 | TODO | QA re-verification passes | P6-03a merged (BUG-02..05, D-020 type) |
 
