@@ -5,7 +5,7 @@ does not commit; the match service calls it inside the same transaction as the
 rating change. Months run from the first rated match's UTC month through the
 current UTC month. A player appears in a month once they have at least one
 rated match at or before that month ends. Rank is by month-end rating, then
-wins in that month, then name. Equal rating and wins share a rank (1, 2, 2, 4).
+wins in that month, then name. Equal ratings share a rank (1, 2, 2, 4).
 """
 
 import uuid
@@ -224,10 +224,10 @@ def _rank_change(
 
 
 def _assign_ranks(rows: list[dict[str, object]]) -> None:
-    last_key: tuple[object, object] | None = None
+    last_key: object | None = None
     rank = 0
     for index, row in enumerate(rows):
-        key = (row["rating"], row["wins"])
+        key = row["rating"]
         if key != last_key:
             rank = index + 1
             last_key = key

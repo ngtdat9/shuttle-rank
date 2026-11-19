@@ -638,8 +638,8 @@ def _validate_game_scores(game_scores: object) -> list[list[int]] | None:
             raise BusinessRuleError("Each game score must be a pair of integers")
         pair: list[int] = []
         for score in game:
-            if isinstance(score, bool) or not isinstance(score, int) or score < 0:
-                raise BusinessRuleError("Game scores must be integers greater than or equal to 0")
+            if isinstance(score, bool) or not isinstance(score, int) or not 0 <= score <= 99:
+                raise BusinessRuleError("Game scores must be integers between 0 and 99")
             pair.append(score)
         cleaned.append(pair)
     return cleaned
@@ -648,6 +648,8 @@ def _validate_game_scores(game_scores: object) -> list[list[int]] | None:
 def _validate_notes(notes: object) -> None:
     if notes is not None and not isinstance(notes, str):
         raise BusinessRuleError("Notes must be a string")
+    if notes is not None and len(notes) > 500:
+        raise BusinessRuleError("Notes must be at most 500 characters")
 
 
 def _require_actor(actor: str) -> str:

@@ -116,7 +116,7 @@ def load_player_stats(
 
 
 def compute_standings(db: Session, *, include_inactive: bool) -> list[Standing]:
-    """Competition ranks: rating desc, wins desc, name asc. Ties share a rank."""
+    """Competition ranks: rating desc, wins desc, name asc. Equal ratings share a rank."""
     stats = load_player_stats(db)
     players = list(db.scalars(select(Player)).all())
     if not include_inactive:
@@ -130,10 +130,10 @@ def compute_standings(db: Session, *, include_inactive: bool) -> list[Standing]:
         )
     )
     standings: list[Standing] = []
-    last_key: tuple[int, int] | None = None
+    last_key: int | None = None
     rank = 0
     for index, player in enumerate(players):
-        key = (player.current_rating, stats[player.id].wins)
+        key = player.current_rating
         if key != last_key:
             rank = index + 1
             last_key = key
