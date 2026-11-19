@@ -1,9 +1,10 @@
 export type AuthMode = "supabase" | "dev";
 
-function readEnv(name: string): string {
-  const value = process.env[name];
-  return typeof value === "string" ? value.trim() : "";
-}
+// Next.js inlines NEXT_PUBLIC_* into client bundles only for literal
+// `process.env.NAME` reads; dynamic `process.env[name]` is undefined in the browser.
+const AUTH_MODE = (process.env.NEXT_PUBLIC_AUTH_MODE ?? "").trim().toLowerCase();
+const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim();
+const SUPABASE_ANON_KEY = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim();
 
 /**
  * `NEXT_PUBLIC_AUTH_MODE=dev` forces the development token form.
@@ -11,18 +12,12 @@ function readEnv(name: string): string {
  * When unset, Supabase is used only if both public Supabase values are present.
  */
 export function resolveAuthMode(): AuthMode {
-  const explicit = readEnv("NEXT_PUBLIC_AUTH_MODE").toLowerCase();
-  if (explicit === "dev") return "dev";
-  if (explicit === "supabase") return "supabase";
-
-  const url = readEnv("NEXT_PUBLIC_SUPABASE_URL");
-  const anonKey = readEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
-  if (url && anonKey) return "supabase";
+  if (AUTH_MODE === "dev") return "dev";
+  if (AUTH_MODE === "supabase") return "supabase";
+  if (SUPABASE_URL && SUPABASE_ANON_KEY) return "supabase";
   return "dev";
 }
 
 export function hasSupabasePublicConfig(): boolean {
-  return Boolean(
-    readEnv("NEXT_PUBLIC_SUPABASE_URL") && readEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
-  );
+  return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 }
