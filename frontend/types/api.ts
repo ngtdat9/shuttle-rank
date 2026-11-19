@@ -60,6 +60,7 @@ export type Match = {
   game_scores: [number, number][] | null;
   notes: string | null;
   rating_changes: RatingChange[];
+  deleted_at: string | null;
   created_at: string;
   updated_at: string;
 };

@@ -44,9 +44,9 @@ export function TopNav() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-card">
-      <div className="mx-auto flex min-h-16 w-full max-w-[1120px] flex-wrap items-center gap-2 px-4 py-2 md:px-8">
+      <div className="mx-auto flex min-h-16 w-full max-w-[1120px] flex-wrap md:flex-nowrap items-center gap-2 px-4 py-2 md:px-8">
         <Logo />
-        <nav aria-label="Sections" className="hidden min-w-0 flex-1 flex-wrap items-center gap-1 md:flex">
+        <nav aria-label="Sections" className="hidden min-w-0 flex-1 flex-nowrap items-center gap-0.5 md:flex">
           {NAV_ITEMS.map((item) => {
             const active = isActive(pathname, item.href);
             const Icon = item.icon;
@@ -56,13 +56,13 @@ export function TopNav() {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1.5 text-sm xl:px-3 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   active
                     ? "bg-elevated text-primary"
                     : "text-muted-foreground hover:bg-elevated hover:text-foreground",
                 )}
               >
-                <Icon className="size-4" strokeWidth={1.75} aria-hidden />
+                <Icon className="hidden size-4 xl:block" strokeWidth={1.75} aria-hidden />
                 {item.label}
               </Link>
             );
