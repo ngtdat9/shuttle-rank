@@ -6,17 +6,31 @@ import {
   ProfileHeader,
   ProfileMatches,
   ProfileMonthly,
+  loadProfile,
 } from "@/components/club/profile-sections";
-import { CardsSkeleton, ChartSkeleton, TableRowsSkeleton } from "@/components/loading-skeleton";
+import { LoadError } from "@/components/load-error";
+import { errorCopy } from "@/lib/load";
+import {
+  CardsSkeleton,
+  ChartSkeleton,
+  TableRowsSkeleton,
+} from "@/components/loading-skeleton";
 
 export const metadata = { title: "Player" };
 
-export default function PlayerPage({ params, searchParams }: PageProps<"/players/[id]">) {
+export default async function PlayerPage({
+  params,
+  searchParams,
+}: PageProps<"/players/[id]">) {
+  const profile = await loadProfile(params);
+  if (!profile.ok) {
+    const copy = errorCopy(profile.error, "this player");
+    return <LoadError title={copy.title} message={copy.message} />;
+  }
+
   return (
     <div className="flex flex-col gap-4 lg:gap-5">
-      <Suspense fallback={<CardsSkeleton count={1} />}>
-        <ProfileHeader params={params} />
-      </Suspense>
+      <ProfileHeader player={profile.data} />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
         <div className="lg:col-span-7">
           <Suspense fallback={<ChartSkeleton />}>
