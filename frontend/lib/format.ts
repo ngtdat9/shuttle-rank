@@ -16,21 +16,21 @@ function parseDateInput(value: string | Date): Date {
     const year = Number(match[1]);
     const month = Number(match[2]);
     const day = Number(match[3]);
-    return new Date(year, month - 1, day);
+    return new Date(Date.UTC(year, month - 1, day));
   }
 
   return new Date(value);
 }
 
 /**
- * Formats a date in the given locale, or the runtime locale when omitted.
- * Date-only strings (`YYYY-MM-DD`) are read as a calendar date, not UTC midnight.
- * Pass an explicit locale when the result is server-rendered and must match hydration.
+ * Formats a date with a fixed locale (en-US) and time zone (UTC) so server and
+ * client render identical text and hydration never mismatches.
+ * Date-only strings (`YYYY-MM-DD`) are read as a calendar date (UTC midnight, shown in UTC).
  */
 export function formatDate(
   value: string | Date,
   options?: Intl.DateTimeFormatOptions,
-  locale?: Intl.LocalesArgument,
+  locale: Intl.LocalesArgument = "en-US",
 ): string {
   const date = parseDateInput(value);
   if (Number.isNaN(date.getTime())) {
@@ -40,6 +40,7 @@ export function formatDate(
   return new Intl.DateTimeFormat(locale, {
     ...DEFAULT_DATE_OPTIONS,
     ...options,
+    timeZone: "UTC",
   }).format(date);
 }
 

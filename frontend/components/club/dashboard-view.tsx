@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AchievementIcon } from "@/components/achievement-icon";
 import { RatingChart, type RatingPoint, type RatingSeries } from "@/components/charts/rating-chart";
 import { isWinner, ratingChangeFor } from "@/components/club/match-utils";
+import { PlayerAvatar } from "@/components/player-avatar";
 import { PlayerInline } from "@/components/club/player-inline";
 import { cardClass, heroCardClass, QuietEmpty, textActionClass } from "@/components/club/styles";
 import { FormGuide } from "@/components/form-guide";
@@ -93,7 +94,7 @@ function LeaderCard({ leader }: { leader: RankingEntry | null }) {
           </p>
           <p className="mt-1 text-xs text-muted-foreground">Elo</p>
         </div>
-        <PlayerInline player={leader.player} size="lg" showInactive={false} />
+        <PlayerAvatar name={leader.player.display_name} imageUrl={leader.player.avatar_url} size="lg" />
       </div>
       <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
         <div>

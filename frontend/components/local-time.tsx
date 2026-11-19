@@ -16,10 +16,7 @@ const DATE_ONLY: Intl.DateTimeFormatOptions = {
   day: "numeric",
 };
 
-/**
- * Formats a UTC instant in the viewer's timezone.
- * suppressHydrationWarning covers the server timezone differing from the browser.
- */
+/** Formats a UTC instant in UTC with a fixed locale, identical on server and client. */
 export function LocalDateTime({
   value,
   withTime = true,
@@ -29,7 +26,7 @@ export function LocalDateTime({
 }) {
   const text = formatDate(value, withTime ? DATE_TIME : DATE_ONLY);
   return (
-    <time dateTime={value} title={value} suppressHydrationWarning>
+    <time dateTime={value} title={value}>
       {text}
     </time>
   );

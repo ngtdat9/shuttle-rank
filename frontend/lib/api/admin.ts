@@ -35,18 +35,11 @@ import type {
   AwardAchievementBody,
 } from "@/types/api";
 
-/**
- * Admin match row. `deleted_at` is read when the payload includes it so deleted
- * rows can be labelled. docs/API.md does not list the field on Match yet.
- */
-export type AdminMatch = Match & {
-  deleted_at?: string | null;
-};
+/** Admin match row. `deleted_at` is set on admin lists with include_deleted. */
+export type AdminMatch = Match;
 
 export function matchDeletedAt(match: AdminMatch): string | null {
-  return typeof match.deleted_at === "string" && match.deleted_at.length > 0
-    ? match.deleted_at
-    : null;
+  return match.deleted_at && match.deleted_at.length > 0 ? match.deleted_at : null;
 }
 
 export type AdminMatchQuery = {
