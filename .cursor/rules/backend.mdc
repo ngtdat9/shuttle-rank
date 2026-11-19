@@ -1,0 +1,42 @@
+---
+description: FastAPI, SQLAlchemy, Alembic, and Elo rules for the backend
+globs: backend/**
+alwaysApply: false
+---
+
+# Backend rules
+
+## Layering
+- `app/api/v1/`: thin route handlers. Parse input, call a service, return a schema. No queries or business rules here.
+- `app/services/`: business rules (`elo.py`, `match_service.py`, `ranking_service.py`, `tournament_service.py`, `achievement_service.py`).
+- `app/repositories/` and `app/models/`: database access. Add repositories only where they make code clearer.
+- `app/schemas/`: Pydantic request/response models. Validate all input.
+- `app/core/`: config (env vars), security/auth. `app/db/`: engine, session dependency.
+- Public `GET` routes and `/admin/*` write routes live in separate routers. All routes are prefixed with `/api/v1`.
+
+## Database
+- SQLAlchemy 2.x typed mappings (`Mapped[...]`, `mapped_column`). UUID primary keys. UTC timestamps.
+- Foreign keys, indexes on match date, player IDs, tournament IDs, and rating-history lookups.
+- Unique constraints: `rating_history(match_id, player_id)`, `monthly_rankings(player_id, year, month)`, `tournament_participants(tournament_id, player_id)`, and player achievements where duplicates are invalid.
+- Match constraints: player A ≠ player B; winner ∈ {A, B}. Enforce them in services and, where practical, in the database.
+- Enable SQLite foreign keys (`PRAGMA foreign_keys=ON` on connect).
+- Every schema change gets an Alembic migration. Do not use `create_all()` for schema management. Avoid SQLite-only SQL so the code ports to PostgreSQL.
+- `DATABASE_URL` comes from the environment (default `sqlite:///./badminton.db`).
+- Deactivate players; never hard-delete a player who has match history.
+
+## Elo and match processing
+- Pure functions in `services/elo.py`, with no database access. Start 1500, K=32, divisor 400.
+- One symmetric integer delta: winner `+delta`, loser `-delta`, so ratings are zero-sum. 1500 vs 1500 gives ±16. Document the rounding method in `docs/ELO_ALGORITHM.md`.
+- Use pre-match ratings. Only `completed` matches affect ratings. Reject processing the same match twice.
+- Process each match in one transaction: update both players' `current_rating`/`highest_rating`, write one `rating_history` row per player.
+- Correction: replay chronologically from the earliest affected match, rebuild affected rating history, update ratings, and write an audit log, all in one transaction. Never just reverse a delta from the current rating.
+- No schema field or endpoint permits manual rating edits.
+
+## Auth
+- Verify the Supabase JWT on every admin write and check a backend-controlled admin allowlist (`ADMIN_USER_ID`). Never trust a role sent by the client.
+- Any dev-only auth stub must be clearly isolated and impossible to enable when `APP_ENV=production`.
+- Write an audit log entry (actor, action, entity, before/after JSON) for every admin write.
+
+## Contract and tests
+- When an endpoint changes, update `docs/API.md` and the Pydantic schemas together. OpenAPI output must match the contract.
+- pytest with an isolated test database. Cover Elo, match processing, replay, constraints, and authorization (anonymous, non-admin, invalid/expired token, admin).

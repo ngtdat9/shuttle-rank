@@ -1,0 +1,38 @@
+---
+description: Project-wide rules for the Badminton Club Ranking App and its multi-agent workflow
+alwaysApply: true
+---
+
+# Badminton Club Ranking App
+
+A small public ranking site for 6 to 10 friends (men's singles, Elo only). Next.js + TypeScript frontend, FastAPI + SQLAlchemy 2.x + Alembic backend, SQLite locally, Supabase PostgreSQL and Supabase Auth in production. Modular monolith, not microservices.
+
+## Sources of truth
+
+- `docs/BUILD_PLAN.md`: requirements, architecture, phases, acceptance criteria. Do not invent requirements beyond it.
+- `docs/TASKS.md`: task board (owned by the `orchestrator` agent).
+- `docs/DECISIONS.md`: decision log (owned by the `orchestrator` agent).
+- `docs/API.md`: backend/frontend API contract (owned by `backend-engineer`, changes approved by `orchestrator`).
+
+## Multi-agent workflow
+
+- `orchestrator` plans, delegates, tracks status, reviews, and merges. Specialists: `backend-engineer` (`backend/**`), `frontend-engineer` (`frontend/**`), `qa-engineer` (tests), `product-ux` (requirements and UX docs).
+- Stay inside your agent's file ownership. Propose changes outside it instead of making them.
+- Concurrent code changes run in separate git worktrees on `task/<task-id>-<slug>` branches. When given a worktree path, work only in that path.
+- A task is `done` only after review, QA PASS, and merge to `main`.
+
+## Working rules
+
+- Work on one phase or small feature at a time, in `docs/BUILD_PLAN.md` phase order.
+- Inspect existing files before changing them; never overwrite a file you have not read.
+- Give a short plan before substantial changes. Explain any schema or architecture change.
+- Business logic needs tests. Run them before reporting success.
+- Update `docs/` when the API contract, database schema, or business rules change.
+- Add no dependencies or abstractions the current task does not need.
+
+## Hard constraints
+
+- The backend owns all business rules and Elo calculations. The frontend never calculates or mutates ratings, and no one may edit a rating manually.
+- Admin permissions are enforced in the backend. Hiding UI is not security.
+- Never commit secrets or `.env` files. Never put secrets or the Supabase service-role key in `NEXT_PUBLIC_*` variables or browser code. `.env.example` files hold placeholders only.
+- Store timestamps in UTC.
