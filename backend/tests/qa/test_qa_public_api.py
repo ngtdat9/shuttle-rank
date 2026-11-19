@@ -4,6 +4,7 @@ import re
 import uuid
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from fastapi.testclient import TestClient
 
 from tests.factories import (
@@ -901,6 +902,10 @@ def test_rankings_use_competition_ties_and_keep_ranks_when_sorted(api_client) ->
     assert resorted == {"Wynn": 1, "Tess": 2, "Una": 2, "Lars": 4}
 
 
+@pytest.mark.xfail(
+    reason="BUG-P2-03-03: tie key is (rating, wins); R-LB-02 says equal ratings share rank",
+    strict=True,
+)
 def test_equal_ratings_share_a_rank_when_win_counts_differ(api_client) -> None:
     client, factory = api_client
     db = factory()
