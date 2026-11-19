@@ -40,8 +40,8 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 
 | ID | Task | Agent | Depends on | Status | Acceptance criteria | Test results |
 |---|---|---|---|---|---|---|
-| P4-01 | Typed API client and contract types | fe | P1-02, P1-04 | IN_PROGRESS | Types match `docs/API.md` | — |
-| P4-02 | Dashboard, leaderboard, monthly leaderboard, players directory, player profile, matches list and detail, head-to-head, with real API calls and loading, empty, and error states | fe | P4-01, P1-03 | IN_PROGRESS | No mock data; mobile and desktop | — |
+| P4-01 | Typed API client and contract types | fe | P1-02, P1-04 | REVIEW | Types match `docs/API.md` | — |
+| P4-02 | Dashboard, leaderboard, monthly leaderboard, players directory, player profile, matches list and detail, head-to-head, with real API calls and loading, empty, and error states | fe | P4-01, P1-03 | REVIEW | No mock data; mobile and desktop | lint, tsc, build pass; routes return 200 with an error state when the API is down. Live-data integration check pending P2-01. Merged |
 
 ## Phase 5: Tournaments, monthly rankings, achievements, admin UI
 
