@@ -12,9 +12,13 @@ for env_file in backend/.env frontend/.env.local frontend/.env; do
   fi
 done
 
+PYTHON_BIN="$(command -v python3.12 || command -v python3)"
 if [ -f backend/requirements.txt ]; then
-  python3 -m venv backend/.venv
-  backend/.venv/bin/pip install --quiet -r backend/requirements.txt
+  "$PYTHON_BIN" -m venv backend/.venv
+  backend/.venv/bin/pip install --quiet --disable-pip-version-check -r backend/requirements.txt
+  if [ -f backend/requirements-dev.txt ]; then
+    backend/.venv/bin/pip install --quiet --disable-pip-version-check -r backend/requirements-dev.txt
+  fi
 fi
 
 if [ -f frontend/package-lock.json ]; then
