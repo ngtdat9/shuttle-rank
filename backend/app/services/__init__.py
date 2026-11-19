@@ -1,1 +1,1 @@
-"""Business rules. Elo lives here; match processing is a later task."""
+"""Business rules. Mutating services commit; replay and snapshot helpers do not."""
