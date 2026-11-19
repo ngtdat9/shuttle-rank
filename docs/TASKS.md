@@ -32,7 +32,7 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 
 | ID | Task | Agent | Depends on | Status | Acceptance criteria | Test results |
 |---|---|---|---|---|---|---|
-| P3-01 | Auth: Supabase JWT (HS256 secret or JWKS), `admin_users` allowlist, isolated dev mode, rate limit, admin bootstrap CLI | be | P2-02 | TODO | 401/403/429 behaviour; dev mode refused in production | — |
+| P3-01 | Auth: Supabase JWT (HS256 secret or JWKS), `admin_users` allowlist, isolated dev mode, rate limit, admin bootstrap CLI | be | P2-02 | IN_PROGRESS | 401/403/429 behaviour; dev mode refused in production | — |
 | P3-02 | Admin player and match endpoints with audit logs; admin stats and audit-log endpoints | be | P3-01 | TODO | Writes audited; manual rating edits impossible | — |
 | P3-03 | Dev seed script (`python -m app.cli seed-demo`), refused in production | be | P3-02 | TODO | Seeds through services, not raw ratings | — |
 
