@@ -37,3 +37,8 @@ class AchievementListResponse(APISchema):
 
 class PlayerAchievementListResponse(APISchema):
     items: list[PlayerAchievement]
+
+
+class AdminAchievementAward(AchievementAward):
+    notes: str | None
+    awarded_by: str

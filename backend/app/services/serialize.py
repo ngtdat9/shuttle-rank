@@ -127,6 +127,7 @@ def _build_match(match: MatchRow, prepared: dict[str, object]) -> Match:
             )
             for row in rows
         ],
+        deleted_at=match.deleted_at,
         created_at=match.created_at,
         updated_at=match.updated_at,
     )

@@ -22,10 +22,11 @@ It would commit early and leave the bracket update on its own.
 ``tournament_service.on_match_changed(db, match, before, change=...)`` after
 the match row is updated and flushed, and before rating replay. ``before``
 is the pre-change snapshot. ``change`` is ``correct``, ``cancel``, or
-``delete``. The hook ignores matches with no ``tournament_id``. Until
-bracket updates are implemented, a tournament match raises
-``BusinessRuleError`` and the caller's transaction rolls the match change
-back.
+``delete``. The hook ignores matches with no ``tournament_id``. For a tournament match it
+moves the bracket with the result, or raises ``BusinessRuleError`` (the next
+bracket match already has a result), and the caller's transaction rolls the
+match change back. Tournament results are created by
+``tournament_service.record_match``, which calls ``_create_match`` itself.
 
 Player writes use the same split in ``player_service``: ``_create_player``,
 ``_update_player``, and ``_deactivate_player``. Read functions do not

@@ -5,6 +5,7 @@ from typing import Literal
 from uuid import UUID
 
 from app.schemas.common import APISchema, PlayerSummary
+from app.schemas.matches import Match
 
 
 class TournamentSummary(APISchema):
@@ -62,3 +63,8 @@ class BracketRound(APISchema):
 class Bracket(APISchema):
     tournament_id: UUID
     rounds: list[BracketRound]
+
+
+class TournamentMatchResult(APISchema):
+    match: Match
+    bracket: Bracket

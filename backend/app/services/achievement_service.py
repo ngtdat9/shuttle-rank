@@ -1,12 +1,13 @@
-"""Achievement queries and a minimal award helper.
+"""Achievement reads and admin writes.
 
-The admin achievement routes arrive in a later task. ``award_achievement``
-commits. ``_award_achievement`` flushes only, so a caller can award inside a
-larger transaction.
+Public mutators (``create_achievement``, ``update_achievement``,
+``award_achievement``, ``revoke_award``) commit. The ``_``-prefixed inner
+functions flush only, so a caller can compose them in a larger transaction.
 """
 
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -20,9 +21,11 @@ from app.schemas.achievements import (
     Achievement,
     AchievementAward,
     AchievementListResponse,
+    AdminAchievementAward,
     PlayerAchievement,
     PlayerAchievementListResponse,
 )
+from app.schemas.common import Paginated
 from app.services.audit import write_audit
 from app.services.ordering import ensure_utc
 from app.services.serialize import load_players, player_summary
@@ -167,6 +170,228 @@ def _award_achievement(
     )
     db.flush()
     return row
+
+
+def get_achievement(db: Session, achievement_id: uuid.UUID) -> Achievement:
+    row = _get_achievement(db, achievement_id)
+    return _achievement(row, _award_counts(db).get(row.id, 0))
+
+
+def create_achievement(
+    db: Session,
+    *,
+    name: str,
+    description: str,
+    actor: str,
+    icon: str = "award",
+    criteria_type: str = "manual",
+    criteria_value: int | None = None,
+) -> AchievementRow:
+    """Insert an achievement definition and write ``achievement.create``. Commits."""
+    with transaction(db):
+        row = _create_achievement(
+            db,
+            name=name,
+            description=description,
+            actor=actor,
+            icon=icon,
+            criteria_type=criteria_type,
+            criteria_value=criteria_value,
+        )
+    db.refresh(row)
+    return row
+
+
+def _create_achievement(
+    db: Session,
+    *,
+    name: str,
+    description: str,
+    actor: str,
+    icon: str = "award",
+    criteria_type: str = "manual",
+    criteria_value: int | None = None,
+) -> AchievementRow:
+    actor_id = _require_actor(actor)
+    _ensure_name_free(db, name, exclude_id=None)
+    row = AchievementRow(
+        name=name,
+        description=description,
+        icon=icon,
+        criteria_type=criteria_type,
+        criteria_value=criteria_value,
+        is_active=True,
+    )
+    db.add(row)
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        raise ConflictError("An achievement with this name already exists") from exc
+    write_audit(
+        db,
+        actor_id=actor_id,
+        action="achievement.create",
+        entity_type="achievement",
+        entity_id=row.id,
+        before_data=None,
+        after_data=_definition_snapshot(row),
+    )
+    db.flush()
+    return row
+
+
+def update_achievement(
+    db: Session, achievement_id: uuid.UUID, *, actor: str, **changes: Any
+) -> AchievementRow:
+    """Change an achievement definition (including ``is_active``). Commits."""
+    with transaction(db):
+        row = _update_achievement(db, achievement_id, actor=actor, **changes)
+    db.refresh(row)
+    return row
+
+
+def _update_achievement(
+    db: Session, achievement_id: uuid.UUID, *, actor: str, **changes: Any
+) -> AchievementRow:
+    actor_id = _require_actor(actor)
+    allowed = {"name", "description", "icon", "criteria_type", "criteria_value", "is_active"}
+    if not changes or set(changes) - allowed:
+        raise BusinessRuleError("No valid achievement changes were provided")
+    row = _get_achievement(db, achievement_id)
+    before = _definition_snapshot(row)
+    if "name" in changes and changes["name"] != row.name:
+        _ensure_name_free(db, changes["name"], exclude_id=row.id)
+    for key, value in changes.items():
+        setattr(row, key, value)
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        raise ConflictError("An achievement with this name already exists") from exc
+    write_audit(
+        db,
+        actor_id=actor_id,
+        action="achievement.update",
+        entity_type="achievement",
+        entity_id=row.id,
+        before_data=before,
+        after_data=_definition_snapshot(row),
+    )
+    db.flush()
+    return row
+
+
+def list_awards(
+    db: Session, *, page: int = 1, page_size: int = 20
+) -> Paginated[AdminAchievementAward]:
+    """All awards, newest first, with ``notes`` and ``awarded_by``."""
+    if page < 1 or not 1 <= page_size <= 100:
+        raise BusinessRuleError("Invalid pagination")
+    total = int(db.scalar(select(func.count()).select_from(PlayerAchievementRow)) or 0)
+    rows = list(
+        db.scalars(
+            select(PlayerAchievementRow)
+            .order_by(PlayerAchievementRow.awarded_at.desc(), PlayerAchievementRow.id.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        ).all()
+    )
+    return Paginated(items=_admin_awards(db, rows), total=total, page=page, page_size=page_size)
+
+
+def get_admin_award(db: Session, award_id: uuid.UUID) -> AdminAchievementAward:
+    row = db.get(PlayerAchievementRow, award_id)
+    if row is None:
+        raise NotFoundError("Award not found")
+    return _admin_awards(db, [row])[0]
+
+
+def get_award(db: Session, award_id: uuid.UUID) -> AchievementAward:
+    admin = get_admin_award(db, award_id)
+    return AchievementAward(
+        id=admin.id,
+        player=admin.player,
+        achievement=admin.achievement,
+        awarded_at=admin.awarded_at,
+    )
+
+
+def revoke_award(db: Session, award_id: uuid.UUID, *, actor: str) -> uuid.UUID:
+    """Delete an award and write ``achievement.revoke``. Commits."""
+    with transaction(db):
+        _revoke_award(db, award_id, actor=actor)
+    return award_id
+
+
+def _revoke_award(db: Session, award_id: uuid.UUID, *, actor: str) -> None:
+    actor_id = _require_actor(actor)
+    row = db.get(PlayerAchievementRow, award_id)
+    if row is None:
+        raise NotFoundError("Award not found")
+    before = {
+        "player_id": row.player_id,
+        "achievement_id": row.achievement_id,
+        "awarded_at": row.awarded_at,
+        "awarded_by": row.awarded_by,
+        "notes": row.notes,
+    }
+    db.delete(row)
+    db.flush()
+    write_audit(
+        db,
+        actor_id=actor_id,
+        action="achievement.revoke",
+        entity_type="player_achievement",
+        entity_id=award_id,
+        before_data=before,
+        after_data=None,
+    )
+    db.flush()
+
+
+def _admin_awards(db: Session, rows: list[PlayerAchievementRow]) -> list[AdminAchievementAward]:
+    if not rows:
+        return []
+    players = load_players(db, {row.player_id for row in rows})
+    achievements = _achievements_by_id(db, {row.achievement_id for row in rows})
+    counts = _award_counts(db)
+    return [
+        AdminAchievementAward(
+            id=row.id,
+            player=player_summary(players[row.player_id]),
+            achievement=_achievement(
+                achievements[row.achievement_id], counts.get(row.achievement_id, 0)
+            ),
+            awarded_at=row.awarded_at,
+            notes=row.notes,
+            awarded_by=row.awarded_by,
+        )
+        for row in rows
+    ]
+
+
+def _get_achievement(db: Session, achievement_id: uuid.UUID) -> AchievementRow:
+    row = db.get(AchievementRow, achievement_id)
+    if row is None:
+        raise NotFoundError("Achievement not found")
+    return row
+
+
+def _ensure_name_free(db: Session, name: str, *, exclude_id: uuid.UUID | None) -> None:
+    wanted = name.strip().casefold()
+    for other_id, other_name in db.execute(select(AchievementRow.id, AchievementRow.name)).all():
+        if other_id != exclude_id and other_name.strip().casefold() == wanted:
+            raise ConflictError("An achievement with this name already exists")
+
+
+def _definition_snapshot(row: AchievementRow) -> dict[str, Any]:
+    return {
+        "name": row.name,
+        "description": row.description,
+        "icon": row.icon,
+        "criteria_type": row.criteria_type,
+        "criteria_value": row.criteria_value,
+        "is_active": row.is_active,
+    }
 
 
 def _require_actor(actor: str) -> str:

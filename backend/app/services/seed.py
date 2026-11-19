@@ -4,8 +4,9 @@
 when the database already has players, unless ``reset`` is set. Reset deletes
 application rows in foreign-key order and leaves ``admin_users`` in place.
 Players, matches, and awards go through the services, so ratings are
-calculated. Pairings use ``random.Random`` with a fixed seed. Tournaments
-are left for the tournament seed.
+calculated. Pairings use ``random.Random`` with a fixed seed. Two tournaments
+(one completed, one in progress) are built through ``tournament_service``, so
+their results are rated matches like any other.
 """
 
 import random
@@ -25,6 +26,7 @@ from app.models.monthly_ranking import MonthlyRanking
 from app.models.player import Player
 from app.models.rating_history import RatingHistory
 from app.models.tournament import BracketMatch, Tournament, TournamentParticipant
+from app.services import tournament_service
 from app.services.achievement_service import award_achievement
 from app.services.audit import write_audit
 from app.services.match_service import create_match
@@ -79,6 +81,7 @@ class SeedSummary:
     canceled: int
     achievements: int
     awards: int
+    tournaments: int
     ratings: tuple[tuple[str, int], ...]
 
     def render(self) -> str:
@@ -91,6 +94,7 @@ class SeedSummary:
                 f"{self.canceled} canceled)"
             ),
             f"achievements: {self.achievements} definitions, {self.awards} awards",
+            f"tournaments: {self.tournaments}",
             "ratings:",
         ]
         lines.extend(f"  {name}: {rating}" for name, rating in self.ratings)
@@ -148,7 +152,76 @@ def seed_demo(db: Session, *, reset: bool = False, now: datetime | None = None) 
 
     definitions = _insert_achievements(db)
     awards = _award_demo(db, players, definitions, moment)
+    _seed_tournaments(db, players, moment, rng)
     return _summary(db, awards)
+
+
+def _seed_tournaments(
+    db: Session, players: list[Player], now: datetime, rng: random.Random
+) -> None:
+    """One completed 4-player bracket and one in-progress 6-player bracket (2 byes)."""
+    today = now.date()
+    autumn = tournament_service.create_tournament(
+        db,
+        name="Autumn Open",
+        description="Season opener, single elimination.",
+        start_date=today - timedelta(days=1),
+        end_date=today,
+        actor=_ACTOR,
+    )
+    tournament_service.add_participants(
+        db, autumn.id, [(player.id, None) for player in players[:4]], actor=_ACTOR
+    )
+    tournament_service.generate_bracket(db, autumn.id, seeding="rating", actor=_ACTOR)
+    _play_round(db, autumn.id, 1, now - timedelta(hours=9), rng, winners="a")
+    _play_round(db, autumn.id, 2, now - timedelta(hours=8), rng, winners="b")
+
+    winter = tournament_service.create_tournament(
+        db,
+        name="Winter Cup",
+        description="Open to everyone. Round one is under way.",
+        start_date=today,
+        actor=_ACTOR,
+    )
+    tournament_service.add_participants(
+        db, winter.id, [(player.id, None) for player in players[2:]], actor=_ACTOR
+    )
+    tournament_service.generate_bracket(db, winter.id, seeding="rating", actor=_ACTOR)
+    _play_round(db, winter.id, 1, now - timedelta(hours=4), rng, winners="a", limit=1)
+
+
+def _play_round(
+    db: Session,
+    tournament_id: uuid.UUID,
+    round_number: int,
+    start: datetime,
+    rng: random.Random,
+    *,
+    winners: str,
+    limit: int | None = None,
+) -> None:
+    """Record ready matches of one round, 20 minutes apart. ``winners`` is ``a`` or ``b``."""
+    bracket = tournament_service.get_bracket(db, tournament_id)
+    ready = [
+        match
+        for rnd in bracket.rounds
+        if rnd.round == round_number
+        for match in rnd.matches
+        if match.status == "ready"
+    ]
+    for index, match in enumerate(ready[:limit]):
+        assert match.player_a is not None and match.player_b is not None
+        winner_is_a = winners == "a"
+        winner = match.player_a if winner_is_a else match.player_b
+        tournament_service.record_match(
+            db,
+            tournament_id,
+            bracket_match_id=match.id,
+            winner_id=winner.id,
+            match_date=start + timedelta(minutes=20 * index),
+            game_scores=_match_scores(rng, winner_is_a),
+            actor=_ACTOR,
+        )
 
 
 def _create_special(
@@ -294,6 +367,7 @@ def _summary(db: Session, awards: int) -> SeedSummary:
         canceled=by_status["canceled"],
         achievements=len(_ACHIEVEMENTS),
         awards=awards,
+        tournaments=int(db.scalar(select(func.count()).select_from(Tournament)) or 0),
         ratings=tuple((player.display_name, player.current_rating) for player in players),
     )
 

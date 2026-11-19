@@ -11,9 +11,7 @@ from app.models.match import Match
 from app.models.player import Player
 from app.services.match_service import (
     _create_match,
-    cancel_match,
     correct_match,
-    delete_match,
     get_rating_history,
 )
 from app.services.player_service import _create_player as create_player_inner
@@ -82,13 +80,6 @@ def test_tournament_result_changes_roll_back(db: Session) -> None:
 
     with pytest.raises(BusinessRuleError, match="cannot be changed"):
         correct_match(db, match.id, reason="swap the draw", actor="tester", player_a_id=cara.id)
-
-    with pytest.raises(BusinessRuleError, match="tournament bracket"):
-        correct_match(db, match.id, reason="wrong winner", actor="tester", winner_id=bob.id)
-    with pytest.raises(BusinessRuleError, match="tournament bracket"):
-        cancel_match(db, match.id, "rain", "tester")
-    with pytest.raises(BusinessRuleError, match="tournament bracket"):
-        delete_match(db, match.id, "void", "tester")
 
     db.expire_all()
     reloaded = db.get(Match, match.id)
