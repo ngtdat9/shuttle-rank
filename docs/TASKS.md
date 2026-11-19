@@ -58,7 +58,7 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 |---|---|---|---|---|---|---|
 | P6-01 | Backend QA: every endpoint, authorization matrix, persistence, tournaments | qa | P5-01 | DONE | `BUILD_PLAN.md` section 11 plus the brief's section 9 | Merged. QA PASS: authz matrix on all 24 admin ops (dev, Supabase HS256, JWKS, production), contract vs OpenAPI, no rating-edit fields, migrations up/down/up, restart persistence, seed sanity, error envelope. 176 tests |
 | P6-02 | Frontend QA: navigation, integration against the seeded backend, states, responsive layouts, admin protection, production build | qa | P5-02, P5-03 | DONE | All pages work against the real API | QA PASS on production build vs seeded API: all public routes match the API, no console or hydration errors, responsive at 390/1024/1440, error and empty states, admin redirects and confirmations, full tournament flow, types match the contract, no secrets in the bundle |
-| P6-03 | Fix defects found in QA | be/fe | P6-01, P6-02 | TODO | QA re-verification passes | P6-03a merged (BUG-02..05, D-020 type) |
+| P6-03 | Fix defects found in QA | be/fe | P6-01, P6-02 | DONE | QA re-verification passes | P6-03a and P6-03b merged; P2-04 fixed BUG-06..08. No open defects |
 
 ### Defects found by orchestrator integration check (2026-11-19, live API + seeded temp DB)
 
@@ -72,8 +72,8 @@ Owned by the `orchestrator`. Scope: `docs/BUILD_PLAN.md` plus the owner's autono
 | BUG-06 | `game_scores` sides above 99 accepted (R-MA-02); `match_service._validate_game_scores` | Medium | P2-04 | DONE (P2-04) |
 | BUG-07 | Notes over 500 chars accepted (R-MA-02); `match_service._validate_notes` (check PATCH too) | Medium | P2-04 | DONE (P2-04) |
 | BUG-08 | Rank ties keyed on (rating, wins) instead of rating only (R-LB-02, OQ-10); `ranking_service.compute_standings`, `monthly_service._assign_ranks` | Medium | P2-04 | DONE (P2-04) |
-| BUG-09 | Rating chart x-axis labels use UTC month/day; can be off by one day vs local near midnight | Low | P6-03 | IN_PROGRESS (P6-03b) |
-| BUG-10 | `/players/[id]` shows five stacked "Couldn't reach" panels when the API is down | Low | P6-03b | IN_PROGRESS |
+| BUG-09 | Rating chart x-axis labels use UTC month/day; can be off by one day vs local near midnight | Low | P6-03 | DONE (P6-03b) |
+| BUG-10 | `/players/[id]` shows five stacked "Couldn't reach" panels when the API is down | Low | P6-03b | DONE (P6-03b) |
 
 Verified working: dashboard data, leaderboard (form ordering, shared ranks, deltas), player profile, head-to-head totals, all public routes return 200 against the live API, and zero-sum ratings (8 players sum to 12000).
 
@@ -81,8 +81,8 @@ Verified working: dashboard data, leaderboard (form ordering, shared ranks, delt
 
 | ID | Task | Agent | Depends on | Status | Acceptance criteria | Test results |
 |---|---|---|---|---|---|---|
-| P7-01 | Postgres portability check (Docker Postgres if available), Dockerfile, `render.yaml`, Vercel config, env documentation, `docs/DEPLOYMENT.md` | be/orch | P6-03 | IN_PROGRESS | Migrations run on Postgres; config complete | Started in parallel with P6-02 (backend/infra only; no frontend overlap) |
-| P7-02 | `README.md`, `docs/FINAL_REPORT.md` | orch | P7-01 | TODO | Accurate, with real test results | — |
+| P7-01 | Postgres portability check (Docker Postgres if available), Dockerfile, `render.yaml`, Vercel config, env documentation, `docs/DEPLOYMENT.md` | be/orch | P6-03 | DONE | Migrations run on Postgres; config complete | Merged. Postgres 18.6: migrations up/down/up, alembic check, seed zero-sum, 395 passed. render.yaml, Dockerfile (not built: no Docker daemon), DEPLOYMENT.md |
+| P7-02 | `README.md`, `docs/FINAL_REPORT.md` | orch | P7-01 | DONE | Accurate, with real test results | README.md and docs/FINAL_REPORT.md written from the final test runs |
 
 ---
 

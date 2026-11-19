@@ -188,3 +188,14 @@ The following decisions were made autonomously by the orchestrator during the un
   - Canceling, deleting, or disputing a tournament match clears its bracket result. The final reopens the tournament. Correcting the match back to `completed` re-attaches it to the open slot for the same two players, or returns `422`.
   - Awarding an unknown `achievement_id` returns `404`.
 - Consequences: Additive; written in `docs/API.md`. Match creation still returns `422` for unknown players, so the two cases are inconsistent. That is accepted.
+
+## D-023: Production database connection and Postgres test override
+- Status: accepted
+- Date: 2026-11-19
+- Context: Supabase's direct connection is IPv6-only, and Render's free tier is IPv4-only. Postgres compatibility needed a repeatable check.
+- Decision:
+  - Production uses the Supabase session pooler for both migrations and runtime.
+  - The engine normalizes `postgres://` URLs to psycopg, enables `pool_pre_ping`, and disables prepared statements so the transaction pooler works.
+  - Render runs `alembic upgrade head` on every start.
+  - Setting `TEST_DATABASE_URL` opts the pytest suite into Postgres. SQLite stays the default.
+- Consequences: No schema change. Migrations run on each deploy, and they are idempotent.
