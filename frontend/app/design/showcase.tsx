@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { Eye } from "lucide-react";
 
 import { BarStat } from "@/components/charts/bar-stat";
+import { Bracket } from "@/components/tournaments/Bracket";
 import { RatingChart } from "@/components/charts/rating-chart";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
@@ -42,6 +43,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatDate, formatDelta, formatRating, formatWinRate } from "@/lib/format";
+
+import { SAMPLE_BRACKET_EIGHT, SAMPLE_BRACKET_FIVE } from "./bracket-samples";
 
 /**
  * Rendered only by app/design/page.tsx.
@@ -350,6 +353,19 @@ export function DesignShowcase() {
         <CardsSkeleton />
         <ChartSkeleton />
         <TableRowsSkeleton />
+      </Block>
+
+      <Block title="Tournament bracket">
+        <p className="text-sm text-muted-foreground">
+          Sample props for visual review, not club data. Five players (byes in the
+          first round) and eight players.
+        </p>
+        <SectionCard title="5 players">
+          <Bracket rounds={SAMPLE_BRACKET_FIVE} />
+        </SectionCard>
+        <SectionCard title="8 players">
+          <Bracket rounds={SAMPLE_BRACKET_EIGHT} />
+        </SectionCard>
       </Block>
 
       <ConfirmDialog
