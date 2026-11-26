@@ -86,6 +86,14 @@ Verified working: dashboard data, leaderboard (form ordering, shared ranks, delt
 
 ---
 
+## Phase 8: Post-launch visual refresh (D-024)
+
+| ID | Task | Agent | Depends on | Status | Acceptance criteria | Test results |
+|---|---|---|---|---|---|---|
+| P8-01 | Liquid glass restyle of all public pages from the approved mockup | fe | — | COMPLETED | Court photo background with scrim; glass nav, cards, tables, chart panels; phone bottom tab bar; admin unchanged; contrast at least 4.5:1; `backdrop-filter` fallback; no API or data changes; lint, tsc and build pass | Merged `task/P8-01-liquid-glass`. Lint, tsc and build pass. QA was a visual check by the orchestrator, since there is no logic change: every public page at 1440, plus the dashboard and the More menu at 390. Admin login is unchanged, with no sideways scroll at 390. Review fix: the wordmark now shows on phones |
+
+---
+
 ## Log
 
 | Date | Task | Change |

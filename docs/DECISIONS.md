@@ -199,3 +199,17 @@ The following decisions were made autonomously by the orchestrator during the un
   - Render runs `alembic upgrade head` on every start.
   - Setting `TEST_DATABASE_URL` opts the pytest suite into Postgres. SQLite stays the default.
 - Consequences: No schema change. Migrations run on each deploy, and they are idempotent.
+
+## D-024: Liquid glass visual redesign of the public site
+- Status: accepted (owner approved the mockup on 2026-11-26)
+- Date: 2026-11-26
+- Context: After launch, the owner asked for a "liquid glass" look for the dashboard, using a badminton-court background. This is a post-launch scope addition beyond `docs/BUILD_PLAN.md`.
+- Decision:
+  - Restyle every public page. Admin pages keep their current plain style.
+  - The background is a full-bleed court photo under a dark green scrim. Panels are frosted glass: a translucent white gradient, `backdrop-filter: blur(...) saturate(...)`, a light 1px edge and an inner top highlight.
+  - Keep the existing palette: lime `#a6f36b` for the primary accent and positive changes, red `#f2706b` for negative ones.
+  - Phones get a floating glass bottom tab bar in place of the top nav links.
+  - The photo is a free Unsplash image by Allison Saeng (Unsplash License), credited in the footer. The owner's own photos in `docs/Design/` are not published because their licence is unclear.
+  - Visual only: no API, data or business-rule changes, and no new dependencies.
+- Reference: the design canvas "Shuttle Rank Liquid Glass" (claude.ai artifact DFDDnfrpYrrcskLn347yKw).
+- Consequences: There is a fallback for browsers without `backdrop-filter` (more opaque panels). Text contrast has to stay at 4.5:1 or better over the photo.
