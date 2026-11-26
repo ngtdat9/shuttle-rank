@@ -40,7 +40,7 @@ export function Logo() {
       <span className="grid size-[34px] place-items-center rounded-[11px] bg-primary text-primary-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
         <LogoMark className="size-5" />
       </span>
-      <span className="hidden text-[17px] font-bold tracking-tight sm:inline md:hidden xl:inline">
+      <span className="inline text-[17px] font-bold tracking-tight md:hidden xl:inline">
         Shuttle Rank
       </span>
     </Link>
