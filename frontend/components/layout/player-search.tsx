@@ -76,7 +76,7 @@ export function PlayerSearch() {
         Search players
       </label>
       <div className="flex items-center">
-        <Search className="pointer-events-none absolute left-3 size-4 text-muted-foreground" aria-hidden />
+        <Search className="pointer-events-none absolute left-3.5 size-4 text-foreground/75 md:left-4" aria-hidden />
         <input
           id={`${listId}-input`}
           ref={inputRef}
@@ -94,14 +94,14 @@ export function PlayerSearch() {
           }}
           onFocus={openSearch}
           onKeyDown={onKeyDown}
-          className="h-10 w-10 rounded-full border border-border bg-transparent pr-3 pl-9 text-sm placeholder:text-transparent focus-visible:w-52 focus-visible:placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:w-52 md:placeholder:text-muted-foreground"
+          className="h-11 w-11 rounded-full border border-white/20 pr-3 pl-10 text-sm font-medium text-foreground placeholder:text-transparent focus-visible:w-52 focus-visible:placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:w-44 md:placeholder:text-muted-foreground xl:w-56"
         />
       </div>
       {open ? (
         <ul
           id={listId}
           role="listbox"
-          className="absolute top-12 right-0 z-40 max-h-80 w-72 overflow-auto rounded-[20px] border border-border bg-elevated p-1 shadow-none"
+          className="absolute top-14 right-0 z-40 max-h-80 w-72 max-w-[calc(100vw-1.5rem)] overflow-auto rounded-[20px] border border-white/20 bg-[rgba(8,28,17,0.94)] p-1.5 shadow-[0_24px_60px_-12px_rgba(0,12,6,0.7)] backdrop-blur-xl"
         >
           {status === "loading" ? <li className="px-3 py-2 text-sm text-muted-foreground">Loading players…</li> : null}
           {status === "error" ? (
@@ -131,12 +131,12 @@ export function PlayerSearch() {
                 type="button"
                 role="option"
                 aria-selected={current?.id === player.id}
-                className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-selected:bg-card"
+                className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm min-h-11 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-selected:bg-white/15"
                 onMouseEnter={() => setActive(filtered.findIndex((item) => item.id === player.id))}
                 onClick={() => choose(player.id)}
               >
                 <span className="truncate">{player.display_name}</span>
-                <span className="text-muted-foreground tabular-nums">
+                <span className="font-mono text-muted-foreground tabular-nums">
                   {formatRating(player.current_rating)}
                 </span>
               </button>

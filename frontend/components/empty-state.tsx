@@ -21,7 +21,7 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-3 rounded-[22px] border border-dashed border-border px-6 py-12 text-center",
+        "sr-dashed flex flex-col items-center justify-center gap-3 rounded-[24px] border border-dashed border-border px-6 py-12 text-center",
         className,
       )}
     >

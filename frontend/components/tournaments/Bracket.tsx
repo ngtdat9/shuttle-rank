@@ -120,7 +120,7 @@ function MatchCard({ match }: { match: BracketMatch }) {
 
   return (
     <div className="relative w-full py-1.5">
-      <article className="rounded-2xl bg-card p-2.5 ring-1 ring-foreground/10">
+      <article className="sr-inset rounded-2xl p-2.5">
         <div className="mb-1 flex items-center justify-between gap-2 px-1.5">
           <StatusChip status={match.status} />
           {scores ? (

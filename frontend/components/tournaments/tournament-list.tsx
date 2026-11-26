@@ -45,7 +45,7 @@ export async function TournamentList({
           <Link
             href={`/tournaments/${tournament.id}`}
             className={cn(
-              "flex h-full flex-col gap-2 rounded-[20px] bg-card p-4 ring-1 ring-foreground/10 transition-colors hover:ring-[#3A403C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:p-5",
+              "flex h-full flex-col gap-2 sr-panel sr-lift rounded-[24px] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:p-5",
               tournament.status === "in_progress" &&
                 "ring-2 ring-primary hover:ring-primary",
             )}

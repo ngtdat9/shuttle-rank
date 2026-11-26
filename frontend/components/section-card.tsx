@@ -28,11 +28,11 @@ export function SectionCard({
   const hasHeader = Boolean(title || description || action);
 
   return (
-    <Card className={cn("rounded-[22px] bg-card ring-foreground/10", className)}>
+    <Card className={cn("sr-panel rounded-[24px] [--card-spacing:--spacing(5)] md:[--card-spacing:--spacing(6)]", className)}>
       {hasHeader ? (
         <CardHeader>
           <div className="min-w-0">
-            {title ? <CardTitle>{title}</CardTitle> : null}
+            {title ? <CardTitle className="text-lg font-semibold">{title}</CardTitle> : null}
             {description ? <CardDescription>{description}</CardDescription> : null}
           </div>
           {action ? <CardAction>{action}</CardAction> : null}
