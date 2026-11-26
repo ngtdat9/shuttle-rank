@@ -13,6 +13,7 @@ import {
 } from "recharts";
 
 import { formatDate, formatDelta, formatRating } from "@/lib/format";
+import { SERIES_COLORS } from "@/lib/series-colors";
 import { cn } from "@/lib/utils";
 
 export type RatingPoint = {
@@ -39,7 +40,8 @@ export type RatingChartProps = {
   height?: number;
 };
 
-const SERIES_COLORS = ["#A6F36B", "#35D5D0", "#F5F7F5", "#C8D4A8", "#A1AAA3"];
+const AXIS_TEXT = "rgba(235,245,238,0.66)";
+const GRID = "rgba(255,255,255,0.1)";
 
 type PointMeta = {
   opponent?: string;
@@ -132,8 +134,8 @@ function RatingTooltip({
   );
 
   return (
-    <div className="rounded-xl border border-border bg-elevated px-3 py-2 text-xs">
-      {dateLabel ? <p className="mb-1 text-muted-foreground">{dateLabel}</p> : null}
+    <div className="glass glass-sm rounded-xl px-3 py-2 text-xs">
+      {dateLabel ? <p className="mb-1 text-foreground/80">{dateLabel}</p> : null}
       <ul className="flex flex-col gap-1">
         {payload.map((entry) => {
           const rating = asNumber(entry.value);
@@ -150,7 +152,7 @@ function RatingTooltip({
                   style={{ background: entry.color ?? "#A6F36B" }}
                 />
                 <span className="text-muted-foreground">{name}</span>
-                <span className="ml-auto font-medium tabular-nums">
+                <span className="ml-auto font-mono font-medium tabular-nums">
                   {rating === null ? "—" : formatRating(rating)}
                 </span>
               </span>
@@ -230,13 +232,13 @@ export function RatingChart({ series, className, height = 256 }: RatingChartProp
                   aria-pressed={on}
                   onClick={() => toggle(item.name)}
                   className={cn(
-                    "inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    on ? "text-foreground" : "text-muted-foreground line-through",
+                    "inline-flex h-9 items-center gap-2 rounded-full px-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    on ? "text-foreground/90" : "text-muted-foreground line-through",
                   )}
                 >
                   <span
-                    className="size-2 rounded-full"
-                    style={{ background: on ? seriesColor(item, index) : "#2C312E" }}
+                    className="size-2.5 rounded-[3px]"
+                    style={{ background: on ? seriesColor(item, index) : "rgba(255,255,255,0.3)" }}
                   />
                   {item.name}
                 </button>
@@ -252,25 +254,26 @@ export function RatingChart({ series, className, height = 256 }: RatingChartProp
       ) : (
         <div style={{ height }} className="w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid vertical={false} stroke="#2C312E" />
+            <LineChart data={rows} margin={{ top: 8, right: 24, left: 0, bottom: 0 }}>
+              <CartesianGrid vertical={false} stroke={GRID} />
               <XAxis
                 dataKey="key"
                 tickLine={false}
                 axisLine={false}
-                tick={{ fill: "#A1AAA3", fontSize: 12 }}
+                tick={{ fill: AXIS_TEXT, fontSize: 12, fontFamily: "var(--font-geist-mono)" }}
                 tickFormatter={(value: string) => {
                   const row = rows.find((entry) => entry.key === value);
                   return displayLabel(row?.label ?? value, timeZone);
                 }}
                 minTickGap={24}
+                padding={{ left: 8, right: 32 }}
               />
               <YAxis
                 tickLine={false}
                 axisLine={false}
                 width={44}
                 domain={[min - pad, max + pad]}
-                tick={{ fill: "#A1AAA3", fontSize: 12 }}
+                tick={{ fill: AXIS_TEXT, fontSize: 12, fontFamily: "var(--font-geist-mono)" }}
                 tickFormatter={(value: number) => formatRating(value)}
               />
               <Tooltip
@@ -284,7 +287,7 @@ export function RatingChart({ series, className, height = 256 }: RatingChartProp
                     timeZone={timeZone}
                   />
                 )}
-                cursor={{ stroke: "#2C312E", strokeWidth: 1 }}
+                cursor={{ stroke: "rgba(255,255,255,0.3)", strokeWidth: 1 }}
               />
               {visible.map(({ item, index }) => {
                 const color = seriesColor(item, index);
@@ -295,7 +298,8 @@ export function RatingChart({ series, className, height = 256 }: RatingChartProp
                     dataKey={seriesDataKey(index)}
                     name={item.name}
                     stroke={color}
-                    strokeWidth={2}
+                    strokeWidth={series.length > 1 && index === 0 ? 3.5 : 2.5}
+                    strokeLinecap="round"
                     connectNulls
                     dot={showDots ? { r: 3, strokeWidth: 0, fill: color } : false}
                     activeDot={{ r: 4, strokeWidth: 0, fill: color }}

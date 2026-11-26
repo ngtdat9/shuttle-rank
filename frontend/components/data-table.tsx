@@ -21,7 +21,7 @@ export function DataTable({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-[22px] bg-card ring-1 ring-foreground/10",
+        "sr-panel overflow-hidden rounded-[24px] bg-card ring-1 ring-foreground/10",
         containerClassName,
       )}
     >

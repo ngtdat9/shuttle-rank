@@ -38,7 +38,7 @@ function RankingCards({ items }: { items: RankingEntry[] }) {
         <li key={entry.player.id}>
           <Link
             href={`/players/${entry.player.id}`}
-            className="block rounded-[20px] bg-card p-4 ring-1 ring-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="sr-panel sr-lift block rounded-[24px] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <span className="flex items-center justify-between gap-3">
               <span className="flex min-w-0 items-center gap-2">

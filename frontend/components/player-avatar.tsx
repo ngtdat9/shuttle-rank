@@ -16,6 +16,8 @@ type PlayerAvatarProps = {
   name: string;
   imageUrl?: string | null;
   size?: "sm" | "md" | "lg";
+  /** Bright fill (dark initials) instead of the name-derived dark tone. */
+  accent?: string;
   className?: string;
 };
 
@@ -51,6 +53,7 @@ export function PlayerAvatar({
   name,
   imageUrl,
   size = "md",
+  accent,
   className,
 }: PlayerAvatarProps) {
   const image = imageUrl?.trim();
@@ -60,7 +63,11 @@ export function PlayerAvatar({
       {image ? <AvatarImage src={image} alt="" /> : null}
       <AvatarFallback
         aria-hidden
-        style={{ backgroundColor: colorFromName(name), color: "#f5f7f5" }}
+        style={
+          accent
+            ? { backgroundColor: accent, color: "#0b0f0c" }
+            : { backgroundColor: colorFromName(name), color: "#f5f7f5" }
+        }
         className="font-medium"
       >
         {initialsFromName(name)}

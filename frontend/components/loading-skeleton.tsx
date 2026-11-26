@@ -23,7 +23,10 @@ export function TableRowsSkeleton({
 }: TableRowsSkeletonProps) {
   return (
     <div
-      className={cn("flex flex-col gap-2", className)}
+      className={cn(
+        "sr-panel flex flex-col gap-2 rounded-[24px] in-[.sr-public]:p-4",
+        className,
+      )}
       aria-hidden
       role="presentation"
     >
@@ -53,7 +56,7 @@ export function CardsSkeleton({ count = 3, className }: CardsSkeletonProps) {
       {Array.from({ length: count }, (_, index) => (
         <div
           key={index}
-          className="flex flex-col gap-3 rounded-[22px] bg-card p-4 ring-1 ring-foreground/10"
+          className="flex flex-col gap-3 sr-panel rounded-[24px] bg-card p-4 ring-1 ring-foreground/10"
         >
           <Skeleton className="h-3 w-20 rounded-full" />
           <Skeleton className="h-9 w-24 rounded-full" />
@@ -68,7 +71,7 @@ export function ChartSkeleton({ className }: ChartSkeletonProps) {
   return (
     <div
       className={cn(
-        "flex h-64 flex-col justify-end gap-3 rounded-[22px] bg-card p-4 ring-1 ring-foreground/10",
+        "sr-panel flex h-64 flex-col justify-end gap-3 rounded-[24px] bg-card p-4 ring-1 ring-foreground/10",
         className,
       )}
       aria-busy="true"

@@ -33,7 +33,7 @@ export async function PlayerDirectory({ searchParams }: { searchParams: Promise<
         <li key={player.id}>
           <Link
             href={`/players/${player.id}`}
-            className="flex h-full flex-col gap-3 rounded-[20px] bg-card p-4 ring-1 ring-foreground/10 transition-colors hover:ring-[#3A403C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:p-5"
+            className="flex h-full flex-col gap-3 sr-panel sr-lift rounded-[24px] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:p-5"
           >
             <span className="flex items-center justify-between gap-3">
               <PlayerAvatar name={player.display_name} imageUrl={player.avatar_url} size="lg" />

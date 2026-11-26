@@ -35,12 +35,12 @@ export function Logo() {
     <Link
       href="/"
       aria-label="Shuttle Rank"
-      className="inline-flex shrink-0 items-center gap-2 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className="inline-flex shrink-0 items-center gap-2.5 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
     >
-      <span className="grid size-8 place-items-center rounded-full bg-primary text-primary-foreground">
-        <LogoMark />
+      <span className="grid size-[34px] place-items-center rounded-[11px] bg-primary text-primary-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
+        <LogoMark className="size-5" />
       </span>
-      <span className="hidden text-sm font-semibold tracking-tight sm:inline">
+      <span className="inline text-[17px] font-bold tracking-tight md:hidden xl:inline">
         Shuttle Rank
       </span>
     </Link>

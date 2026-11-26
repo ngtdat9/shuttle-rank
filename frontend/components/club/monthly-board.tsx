@@ -32,7 +32,7 @@ function MonthTable({ data }: { data: MonthlyRankingsResponse }) {
           <li key={item.player.id}>
             <Link
               href={`/players/${item.player.id}`}
-              className="block rounded-[20px] bg-card p-4 ring-1 ring-foreground/10"
+              className="sr-panel block rounded-[24px] p-4"
             >
               <span className="flex items-center justify-between gap-3">
                 <span className="flex items-center gap-2">

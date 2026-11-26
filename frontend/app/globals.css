@@ -118,3 +118,230 @@
     color: #0b0f0c;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Liquid glass (public site only)                                     */
+/*                                                                     */
+/* `.glass` is the standalone surface. `.sr-panel` is the same surface */
+/* but only inside `.sr-public` (the public AppShell wrapper), so      */
+/* components shared with /admin keep their plain dark look there.     */
+/* Unlayered on purpose: it must win over Tailwind's layered utilities.*/
+/* ------------------------------------------------------------------ */
+
+.sr-public {
+  --sr-blur: 22px;
+  --sr-tint: 0.14;
+  /* Higher-contrast tokens over photo + glass. */
+  --muted-foreground: rgba(235, 245, 238, 0.76);
+  --border: rgba(255, 255, 255, 0.16);
+  --input: rgba(255, 255, 255, 0.22);
+  --card: rgba(255, 255, 255, 0.08);
+  --elevated: rgba(255, 255, 255, 0.1);
+  --muted: rgba(255, 255, 255, 0.12);
+  --positive: #c6ff9a;
+  --negative: #ffb1ad;
+  --warning: #ffd36b;
+  position: relative;
+  background: #06140d;
+  color: #f5f7f5;
+}
+
+.sr-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: #0b2a19;
+  pointer-events: none;
+}
+
+.sr-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(4, 18, 10, 0.5) 0%,
+    rgba(4, 16, 10, 0.64) 30%,
+    rgba(3, 10, 6, 0.8) 100%
+  );
+}
+
+@media (min-width: 768px) {
+  .sr-scrim {
+    background: radial-gradient(
+      120% 80% at 70% 10%,
+      rgba(6, 24, 14, 0.45) 0%,
+      rgba(4, 16, 10, 0.6) 55%,
+      rgba(3, 10, 6, 0.75) 100%
+    );
+  }
+}
+
+.glass,
+.sr-public .sr-panel {
+  isolation: isolate;
+  overflow: hidden;
+  background: linear-gradient(
+    140deg,
+    rgba(255, 255, 255, var(--sr-tint, 0.14)) 0%,
+    rgba(255, 255, 255, calc(var(--sr-tint, 0.14) * 0.35)) 60%,
+    rgba(255, 255, 255, calc(var(--sr-tint, 0.14) * 0.55)) 100%
+  );
+  -webkit-backdrop-filter: blur(var(--sr-blur, 22px)) saturate(170%);
+  backdrop-filter: blur(var(--sr-blur, 22px)) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    inset 1px 0 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 24px 60px -12px rgba(0, 12, 6, 0.55);
+}
+
+/* In a layer so `rounded-*` / `fixed` / `sticky` utilities on the element win. */
+@layer components {
+  .glass,
+  .sr-public .sr-panel {
+    position: relative;
+  }
+  .glass {
+    border-radius: 28px;
+  }
+  .glass-sm {
+    border-radius: 18px;
+  }
+}
+
+.glass::before,
+.sr-public .sr-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(
+    90% 60% at 12% -10%,
+    rgba(255, 255, 255, 0.22),
+    rgba(255, 255, 255, 0) 60%
+  );
+}
+
+/* Nav surfaces hold popovers, so they must not clip. */
+.glass.glass-open,
+.sr-public .sr-panel.glass-open {
+  overflow: visible;
+}
+
+/* Quiet inset tile inside a glass panel (no blur: never nest backdrop filters). */
+.sr-inset {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sr-public .sr-dashed {
+  border: 1px dashed rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Readable fallback where backdrop-filter is missing. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass,
+  .sr-public .sr-panel {
+    background: rgba(10, 34, 21, 0.9);
+    border-color: rgba(255, 255, 255, 0.22);
+  }
+  .sr-inset {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .sr-public .sr-panel {
+    background: rgba(10, 34, 21, 0.94);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* Buttons on the public site: lime primary, glass outline. */
+.sr-public [data-slot="button"][data-variant="default"] {
+  box-shadow:
+    0 8px 24px -8px rgba(166, 243, 107, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.sr-public [data-slot="button"][data-variant="outline"] {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.26);
+  color: #f5f7f5;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.sr-public [data-slot="button"][data-variant="outline"]:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.sr-public input:not([type="checkbox"]):not([type="radio"]),
+.sr-public [data-slot="select-trigger"] {
+  background-color: rgba(0, 0, 0, 0.22);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Table rows on glass. */
+.sr-public [data-slot="table-row"]:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.sr-public [data-slot="table-row"] {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.sr-public [data-slot="table-head"] {
+  color: rgba(235, 245, 238, 0.76);
+}
+
+/* Micro-interactions (no transforms under reduced motion). */
+@media (prefers-reduced-motion: no-preference) {
+  .sr-public [data-slot="button"],
+  .sr-public .sr-lift,
+  .sr-public .sr-tab {
+    transition:
+      transform 0.15s ease,
+      background-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+  .sr-public [data-slot="button"]:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+  .sr-public [data-slot="button"]:active:not(:disabled) {
+    transform: translateY(1px) scale(0.98);
+  }
+  .sr-public .sr-lift:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.sr-public .sr-lift:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+
+.sr-public .sr-panel[role="alert"] {
+  border-left: 3px solid var(--destructive);
+}
+
+.sr-public .sr-action {
+  color: #a6f36b;
+}
+
+.sr-public .sr-action:hover {
+  color: #d4ffb0;
+}
+
+/* Ratings, scores and stats use Geist Mono with tabular figures. */
+.sr-public .tabular-nums {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+}

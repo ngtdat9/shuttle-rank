@@ -44,7 +44,7 @@ function BarTooltip({
   const value = asNumber(payload[0]?.value);
 
   return (
-    <div className="rounded-2xl border border-border bg-elevated px-3 py-2 text-xs shadow-lg">
+    <div className="glass glass-sm px-3 py-2 text-xs">
       <p className="text-muted-foreground">{label}</p>
       <p className="mt-0.5 font-medium tabular-nums text-positive">
         {value === null ? "—" : value}
@@ -82,13 +82,13 @@ export function BarStat({
             dataKey="label"
             tickLine={false}
             axisLine={false}
-            tick={{ fill: "#a1aaa3", fontSize: 11 }}
+            tick={{ fill: "rgba(235,245,238,0.66)", fontSize: 11 }}
           />
           <YAxis
             tickLine={false}
             axisLine={false}
             width={28}
-            tick={{ fill: "#a1aaa3", fontSize: 11 }}
+            tick={{ fill: "rgba(235,245,238,0.66)", fontSize: 11 }}
           />
           <Tooltip
             cursor={{ fill: "rgba(255,255,255,0.04)" }}

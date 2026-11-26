@@ -29,10 +29,10 @@ export function FormGuide({ results, order = "as-given", className }: FormGuideP
             key={`${result}-${index}`}
             aria-hidden
             className={cn(
-              "inline-flex size-6 items-center justify-center rounded-full text-[10px] font-semibold",
+              "inline-flex size-[22px] items-center justify-center rounded-[7px] border text-[11px] font-bold",
               result === "W"
-                ? "bg-primary/15 text-positive"
-                : "bg-destructive/15 text-negative",
+                ? "border-primary/45 bg-primary/20 text-positive"
+                : "border-destructive/45 bg-destructive/20 text-negative",
             )}
           >
             {result}
